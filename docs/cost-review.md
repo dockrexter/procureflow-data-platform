@@ -1,6 +1,6 @@
 # Azure cost review — historical trial observations
 
-Architecture updated locally to GitHub Actions → source Blob Storage → ADF → ADLS. No new billing check or deployment was performed during this change. Refresh the observations below before provisioning.
+Before the 2026-10-19 foundation deployment, the trial subscription was checked: Enabled, FreeTrial_2014-09-01, spendingLimit On; portal displayed USD 200 remaining and 29 days. Deployment succeeded. These are pre-deployment observations, not a current balance. Existing storage resources remain subject to charges; generation and ingestion have not been activated.
 
 Observed in the signed-in Azure portal before provisioning: the selected trial subscription is active, user is Owner, the portal notification shows EUR 175.99 credit remaining; subscription overview shows USD 200 remaining with 29 days to expiry, current cost 0.00 and no active resource usage. These are portal displays in different currencies, not a calculated conversion. The account also has another subscription with the same display name; deployment must use the explicit selected trial subscription ID locally.
 
@@ -11,7 +11,7 @@ Exposure by component:
 - Source Blob Storage Standard LRS: a separate account and outbound container add metered stored bytes and operations. GitHub uploads and read-back verification produce storage operations; ADF reads add more. No always-on server is required.
 - ADLS Standard LRS: stored bytes, storage operations and applicable transfer are metered. Public blob access, shared keys and native storage SFTP are disabled. The authenticated network endpoint is public for this learning environment; production should use private networking.
 - ADF: copy activity/orchestration and integration runtime use are metered. No trigger or mapping-data-flow session is activated.
-- Databricks: workspace definition is optional and off by default. No cluster, SQL warehouse, serverless task or scheduled job is started. Running the bundle later incurs compute charges.
+- Databricks: workspace has not been deployed. No cluster, SQL warehouse, serverless task or scheduled job is started. Running the bundle later incurs compute charges.
 - No SFTP service, Docker host or cloud VM is part of the revised design.
 - GitHub private Actions: subject to the account's included minutes/storage and billing settings. Artifacts expire after 30 days; no unlimited retention is implied.
 

@@ -3,7 +3,7 @@
 A learning project: synthetic SAP-style procurement data, independent daily delivery, and an Azure data platform. You will configure and activate each stage step by step. These extracts are simplified simulations, not a real SAP connector.
 
 ```text
-GitHub Actions: scheduled Python generator
+Future GitHub Actions: Python generator (currently inactive)
     ↓ verified upload, completion marker last
 Azure source Blob Storage: outbound/SAP_S4HANA/YYYY-MM-DD/
     ↓ Azure Data Factory
@@ -34,21 +34,20 @@ Bootstrap includes 90 days of history, 5 companies, 20 plants, 10 purchasing org
 | `data-generator/` | Python, business relationships and reproducible data |
 | `config/` | Source settings such as dates, volumes and random seed |
 | `data/` | Local generated files, excluded from Git |
-| `scripts/` | Publishing, validation and running an ADF batch |
+| `scripts/` | Direct storage uploads and validation |
 | `adf/` | Blob-source linked service, datasets and copy pipeline |
-| `infrastructure/bicep/` | Resource group, source storage, ADLS, ADF and optional Databricks definitions |
 | `databricks/` | Bronze processing code and job configuration |
-| `.github/workflows/` | Code checks and the future daily workflow |
+| `.github/workflows/` | Code checks only; no generation or deployment |
 | `tests/` | Automated checks for correctness and delivery failures |
 | `docs/` | Data contract, learning steps, costs and actual status |
 | `powerbi/` | Reserved for later reporting work |
 
-`.yml` files are instructions read by GitHub Actions or Databricks; `.bicep` describes Azure resources, `.py` contains logic, `.json` holds structured settings, and `.md` contains explanations. A definition file does not create a cloud resource on its own.
+.yml files are instructions read by GitHub Actions or Databricks; `.py` contains logic, `.json` holds structured settings, and `.md` contains explanations. A definition file does not create a cloud resource on its own.
 
-## Not activated
+## Current learning setup
 
-The revised architecture is prepared for publication and deployment. See docs/sprint-status.md for verified deployment results. The repository is retained at the user’s request.
+Azure resources already exist. Manage them through the Azure portal; infrastructure templates and deployment scripts have been removed. ADF is connected to Git by the user; build and publish the pipeline in ADF Studio.
 
-The revised workflow has three independent switches, all disabled when unset: `DAILY_GENERATION_ENABLED`, `AZURE_SOURCE_PUBLISH_ENABLED`, and `ADF_RUN_ENABLED`. A manual generation run can create an artifact without Azure access. No push or workflow provisions Azure resources. Cloud identities, access and cost checks must be completed before activation.
+Generation/upload automation is **inactive**: its example lives at `docs/templates/generate-upload.yml.example`, outside GitHub's workflow folder. There is no generation schedule or manual generation workflow. CI only validates code. The future uploader sends generated files directly to source Blob Storage and does not start ADF.
 
-See [step-by-step runbook](docs/runbook.md), [data contract](docs/data-contract.md), [cost review](docs/cost-review.md) and [current status](docs/sprint-status.md).
+Complete the pipeline before activating any upload workflow. Existing Azure resources have not been deleted; storage remains subject to charges. See [learning steps](docs/runbook.md), [data contract](docs/data-contract.md), [cost review](docs/cost-review.md), and [verified status](docs/sprint-status.md).

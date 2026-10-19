@@ -4,6 +4,8 @@ from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 for p in (root/'adf').rglob('*.json'):
     data=json.loads(p.read_text())
+    if p.name == 'publish_config.json':
+        continue
     assert data['name']==p.stem,p
     def walk(obj):
         if isinstance(obj,dict):

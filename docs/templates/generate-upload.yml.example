@@ -1,7 +1,6 @@
+# INACTIVE TEMPLATE: keep outside .github/workflows until the pipeline is complete.
 name: Generate source batch
 on:
-  schedule:
-    - cron: '15 3 * * *'
   workflow_dispatch:
     inputs:
       date:
@@ -19,8 +18,6 @@ concurrency:
   cancel-in-progress: false
 jobs:
   generate:
-    # Learning mode: scheduled runs stay disabled until explicitly configured.
-    if: github.event_name == 'workflow_dispatch' || vars.DAILY_GENERATION_ENABLED == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -55,16 +52,4 @@ jobs:
         run: |
           for batch in data/outbound/SAP_S4HANA/*; do
             python scripts/publish_blob.py "$batch" --account "$SOURCE_STORAGE_ACCOUNT"
-          done
-      - name: Ingest completed batch with ADF
-        if: vars.AZURE_SOURCE_PUBLISH_ENABLED == 'true' && vars.ADF_RUN_ENABLED == 'true'
-        env:
-          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
-          ADF_FACTORY: ${{ vars.ADF_FACTORY }}
-          SOURCE_STORAGE_ACCOUNT: ${{ vars.SOURCE_STORAGE_ACCOUNT }}
-          LANDING_STORAGE_ACCOUNT: ${{ vars.LANDING_STORAGE_ACCOUNT }}
-        run: |
-          for batch in data/outbound/SAP_S4HANA/*; do
-            python scripts/run_adf.py "$batch"
           done

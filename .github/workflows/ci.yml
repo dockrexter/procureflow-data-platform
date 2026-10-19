@@ -13,4 +13,3 @@ jobs:
       - run: python scripts/publish_blob.py --help
       - run: python -m unittest discover -s tests -v
       - run: python scripts/check_definitions.py
-      - run: az bicep build --file infrastructure/bicep/main.bicep --outfile /tmp/procureflow-arm.json

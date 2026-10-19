@@ -1,5 +1,4 @@
 import json
-import os
 import sys
 import tempfile
 import unittest
@@ -8,7 +7,6 @@ from unittest.mock import patch
 from test_generator import g, C, D
 sys.path.insert(0, str(Path(__file__).parents[1]/'scripts'))
 import landing
-import run_adf
 
 class FakeAzure:
     def __init__(self):self.blobs={};self.uploads=[];self.fail_name=None
@@ -47,18 +45,3 @@ class BlobDeliveryTests(unittest.TestCase):
                 fake.fail_name=None
                 landing.land(batch,account='sourcesample',container='outbound')
                 self.assertTrue(fake.uploads[-1].endswith('/_SUCCESS'))
-    def test_adf_uses_manifest_date_and_reports_failure(self):
-        env={'AZURE_SUBSCRIPTION_ID':'sub','AZURE_RESOURCE_GROUP':'rg','ADF_FACTORY':'adf',
-             'SOURCE_STORAGE_ACCOUNT':'source','LANDING_STORAGE_ACCOUNT':'lake'}
-        with tempfile.TemporaryDirectory() as tmp,patch.dict(os.environ,env):
-            batch=g.write_batch(C,D,'bootstrap',tmp)
-            def reply(args,**kwargs):
-                if 'post' in args:
-                    params=json.loads(Path(args[args.index('--body')+1][1:]).read_text())
-                    self.assertEqual(params,{'source':'SAP_S4HANA','batchDate':D.isoformat(),'sourceAccount':'source','account':'lake'})
-                    return json.dumps({'runId':'run-1'})
-                return json.dumps({'status':'Succeeded'})
-            with patch.object(run_adf.subprocess,'check_output',side_effect=reply):
-                self.assertEqual(run_adf.run(batch),'run-1')
-            with patch.object(run_adf.subprocess,'check_output',side_effect=['{"runId":"run-2"}','{"status":"Failed"}']):
-                with self.assertRaises(RuntimeError):run_adf.run(batch)
