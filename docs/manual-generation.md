@@ -2,6 +2,8 @@
 
 Open https://github.com/dockrexter/procureflow-data-platform/actions/workflows/generate.yml.
 
+Initial bootstrap **2026-10-19** is already uploaded and verified: [successful run](https://github.com/dockrexter/procureflow-data-platform/actions/runs/39289889086). Use **daily / 2026-10-20** for the next new batch, or repeat bootstrap with the same date to verify an identical retry.
+
 ## Start
 
 1. Click **Run workflow**, keeping branch **main**.
