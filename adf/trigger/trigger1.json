@@ -1,0 +1,31 @@
+{
+	"name": "trigger1",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pl_blob_to_landing",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"source": "SAP_S4HANA",
+					"batchDate": "@last(split(triggerBody().folderPath, '/'))",
+					"account": "procureflowywlye2bmne5kc",
+					"sourceAccount": "pfsrcywlye2bmne5kc"
+				}
+			}
+		],
+		"type": "BlobEventsTrigger",
+		"typeProperties": {
+			"blobPathBeginsWith": "/outbound/blobs/SAP_S4HANA",
+			"blobPathEndsWith": "_SUCCESS",
+			"ignoreEmptyBlobs": true,
+			"scope": "/subscriptions/c3cc8c7c-2add-46ef-b570-46b02f846e70/resourceGroups/rg-procureflow-dev/providers/Microsoft.Storage/storageAccounts/pfsrcywlye2bmne5kc",
+			"events": [
+				"Microsoft.Storage.BlobCreated"
+			]
+		}
+	}
+}
