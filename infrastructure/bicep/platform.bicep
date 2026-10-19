@@ -76,3 +76,38 @@ resource workspace 'Microsoft.Databricks/workspaces@2024-05-01' = if (deployData
 }
 output storageAccount string = storage.name
 output factoryName string = factory.name
+
+// Separate source-system account; the platform lake remains independent.
+resource sourceStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+  name: 'pfsrc${suffix}'
+  location: location
+  kind: 'StorageV2'
+  sku: { name: 'Standard_LRS' }
+  properties: {
+    allowBlobPublicAccess: false
+    allowSharedKeyAccess: false
+    minimumTlsVersion: 'TLS1_2'
+    supportsHttpsTrafficOnly: true
+    accessTier: 'Hot'
+  }
+}
+resource sourceBlobs 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
+  parent: sourceStorage
+  name: 'default'
+  properties: {}
+}
+resource outbound 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: sourceBlobs
+  name: 'outbound'
+  properties: { publicAccess: 'None' }
+}
+resource sourceReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(outbound.id, factory.id, 'reader')
+  scope: outbound
+  properties: {
+    principalId: factory.identity.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions','2a2b9908-6ea1-4ae2-8e65-a410df84e7d1')
+  }
+}
+output sourceStorageAccount string = sourceStorage.name

@@ -24,3 +24,4 @@ module platform './platform.bicep' = {
 output storageAccount string = platform.outputs.storageAccount
 output factoryName string = platform.outputs.factoryName
 output resourceGroup string = rg.name
+output sourceStorageAccount string = platform.outputs.sourceStorageAccount

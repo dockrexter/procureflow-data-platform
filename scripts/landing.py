@@ -33,7 +33,7 @@ def az(*args):
     return subprocess.run(['az',*args,'--only-show-errors'],check=True,capture_output=True,text=True).stdout
 
 
-def land(source, root=None, account=None):
+def land(source, root=None, account=None, container="landing"):
     source=Path(source);m=verify(source)
     prefix=f"{m['source']}/{m['batch_date']}"
     names=sorted(m['files'])+['manifest.json','_SUCCESS']
@@ -50,7 +50,8 @@ def land(source, root=None, account=None):
             verify(stage);stage.rename(dest)
         return str(dest)
     if not account or not re.fullmatch('[a-z0-9]{3,24}',account):raise ValueError('Invalid storage account')
-    common=['--account-name',account,'--container-name','landing','--auth-mode','login']
+    if container not in ['landing','outbound']:raise ValueError('Invalid container')
+    common=['--account-name',account,'--container-name',container,'--auth-mode','login']
     # Compare before writing. Never overwrite a different blob; interrupted uploads can resume.
     for n in names:
         blob=f'{prefix}/{n}'
@@ -68,7 +69,7 @@ def land(source, root=None, account=None):
             downloaded=Path(tmp)/n
             az('storage','blob','download',*common,'--name',blob,'--file',str(downloaded),'--no-progress')
             if downloaded.read_bytes()!=(source/n).read_bytes():raise ValueError(f'Read-back mismatch: {blob}')
-    return f'https://{account}.dfs.core.windows.net/landing/{prefix}'
+    return f'https://{account}.blob.core.windows.net/{container}/{prefix}'
 
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('batch')

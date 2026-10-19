@@ -1,10 +1,22 @@
 # ProcureFlow
 
-One independent, deterministic synthetic SAP S/4HANA-style procurement source and an Azure data platform foundation. These are simplified extracts, not SAP database replicas or a production SAP connector. No real supplier or personal data is used.
+A learning project: synthetic SAP-style procurement data, independent daily delivery, and an Azure data platform. You will configure and activate each stage step by step. These extracts are simplified simulations, not a real SAP connector.
 
-## Run locally
+```text
+GitHub Actions: scheduled Python generator
+    ↓ verified upload, completion marker last
+Azure source Blob Storage: outbound/SAP_S4HANA/YYYY-MM-DD/
+    ↓ Azure Data Factory
+Separate ADLS Gen2 account: landing/SAP_S4HANA/YYYY-MM-DD/
+    ↓ Databricks
+Bronze → Silver → Gold → Power BI (later stages)
+```
 
-Python 3.11+; generator and local landing have no external dependencies. From this repository:
+No laptop, SFTP server, Docker container or continuously running VM is needed for the future cloud workflow. GitHub provides temporary runners; Azure stores the delivered files between runs. Scheduling is best effort, so missed dates must be replayed.
+
+## Start locally
+
+Python 3.11+; generator and tests use the standard library:
 
 ```sh
 python3 -m unittest discover -s tests -v
@@ -13,20 +25,30 @@ python3 data-generator/generate.py daily --date 2026-10-20
 python3 scripts/landing.py data/outbound/SAP_S4HANA/2026-10-19 --local-root data/landing
 ```
 
-The bootstrap contains 90 days of history, 5 companies, 20 plants, 10 purchasing organizations, 1,000 suppliers, 5,000 materials, 10,000 POs and their lifecycle events through the bootstrap date. Daily batches add 100 POs and events falling on that date, including events for earlier POs. Future-dated sample batches are tests, not live production activity.
+Bootstrap includes 90 days of history, 5 companies, 20 plants, 10 purchasing organizations, 1,000 suppliers, 5,000 materials, 10,000 POs and related events through the bootstrap date. Daily batches add 100 POs and events for that day, including receipts/payments for earlier POs. The epoch is in `config/sap_s4hana.json`; do not change it mid-stream.
 
-## Repository
+## Directory guide
 
-- `data-generator/`: independent source simulator.
-- `config/`: immutable source identity, seed, epoch and volumes.
-- `sftp/`: local SSH-key-only SFTP fixture (localhost port 2222).
-- `adf/`: parameterized SFTP-to-landing pipeline and linked services.
-- `infrastructure/bicep/`: resource group, ADLS Gen2, ADF identity/access, optional Databricks workspace.
-- `databricks/`: bundle and verified-batch Bronze Delta ingestion notebook; requires configured workspace/storage access and an existing cluster.
-- `scripts/`: validation, local/Azure landing and deployment helpers.
-- `.github/workflows/`: tests, infrastructure compilation, daily source artifacts.
-- `docs/`: contracts, costs, operation and actual sprint status.
+| Folder | What you will learn |
+|---|---|
+| `data-generator/` | Python, business relationships and reproducible data |
+| `config/` | Source settings such as dates, volumes and random seed |
+| `data/` | Local generated files, excluded from Git |
+| `scripts/` | Publishing, validation and running an ADF batch |
+| `adf/` | Blob-source linked service, datasets and copy pipeline |
+| `infrastructure/bicep/` | Resource group, source storage, ADLS, ADF and optional Databricks definitions |
+| `databricks/` | Bronze processing code and job configuration |
+| `.github/workflows/` | Code checks and the future daily workflow |
+| `tests/` | Automated checks for correctness and delivery failures |
+| `docs/` | Data contract, learning steps, costs and actual status |
+| `powerbi/` | Reserved for later reporting work |
 
-Generated data and credentials are ignored by Git. The scheduled source workflow produces retained GitHub Actions artifacts; optional atomic SFTP publication activates only when `SFTP_PUBLISH_ENABLED=true` and the documented secrets are configured. No SFTP host is connected yet. No Azure deployment is performed by a push or scheduled workflow.
+`.yml` files are instructions read by GitHub Actions or Databricks; `.bicep` describes Azure resources, `.py` contains logic, `.json` holds structured settings, and `.md` contains explanations. A definition file does not create a cloud resource on its own.
 
-See [data contract](docs/data-contract.md), [runbook](docs/runbook.md), [cost review](docs/cost-review.md) and [sprint status](docs/sprint-status.md).
+## Not activated
+
+The revised architecture is prepared for publication and deployment. See docs/sprint-status.md for verified deployment results. The repository is retained at the user’s request.
+
+The revised workflow has three independent switches, all disabled when unset: `DAILY_GENERATION_ENABLED`, `AZURE_SOURCE_PUBLISH_ENABLED`, and `ADF_RUN_ENABLED`. A manual generation run can create an artifact without Azure access. No push or workflow provisions Azure resources. Cloud identities, access and cost checks must be completed before activation.
+
+See [step-by-step runbook](docs/runbook.md), [data contract](docs/data-contract.md), [cost review](docs/cost-review.md) and [current status](docs/sprint-status.md).

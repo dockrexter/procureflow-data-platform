@@ -1,9 +1,0 @@
-services:
-  source:
-    build: .
-    ports:
-      - "127.0.0.1:2222:22"
-    volumes:
-      - ../data/outbound:/home/source/outbound:ro
-      - ./keys/source.pub:/etc/ssh/authorized_keys/source:ro
-    restart: "no"

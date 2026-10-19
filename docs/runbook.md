@@ -1,44 +1,86 @@
-# Operations
+# Learn and activate one stage at a time
 
-## Azure foundation
+The files are prepared locally, but the user performs the setup. Do not run a deployment simply to follow this document from top to bottom. Finish and understand one stage first.
 
-Use Azure CLI with an authenticated account, or Azure Cloud Shell. Identify the trial by ID, not its non-unique display name. Read the credit/expiry page, then:
+## 1. Understand and generate data
+
+Start with suppliers, PO headers and PO items. Understand their keys before adding receipts, invoices and payments. The generator's configuration fixes the epoch and seed. Bootstrap must use the epoch date. Daily dates must follow it. Generate bootstrap first, then every subsequent business date in sequence. Existing identical batches are accepted; conflicting retries fail.
+
+## 2. Understand GitHub automation
+
+Publish the revised project to the repository you choose when ready. The previous repository still has its previous code until explicitly changed or deleted. `.github/workflows/ci.yml` runs tests and compiles Bicep. `generate.yml` runs the generator and retains a downloadable artifact for 30 days.
+
+Scheduled generation at 03:15 UTC is skipped unless `DAILY_GENERATION_ENABLED=true`. Manual dispatch is available independently. Supply an explicit date and select bootstrap for the first run. A default daily dispatch on the epoch date is invalid. Re-run missed dates explicitly: GitHub cron can be delayed or skipped, and this implementation does not automatically discover gaps. Generate and ingest backfills sequentially. Retained artifacts are not permanent source storage.
+
+## 3. Review cost, then create the foundation
+
+The Bicep templates define two independent accounts: source Blob Storage (`outbound`) and the platform's ADLS Gen2 (`landing`, `bronze`, `silver`, `gold`). They also define ADF and its storage permissions. Databricks remains optional and disabled by default. No compute or Azure schedule is started by these definitions.
+
+Refresh trial credit, expiry and spending protection before provisioning. Use the intended subscription ID; subscription names need not be unique. Commands for the later deployment lesson:
 
 ```sh
 az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 python3 scripts/cost_preflight.py --subscription "$AZURE_SUBSCRIPTION_ID"
 az deployment sub what-if --location northeurope --template-file infrastructure/bicep/main.bicep
+# Review the preview before running the following command:
 az deployment sub create --name procureflow-foundation --location northeurope --template-file infrastructure/bicep/main.bicep
 ```
 
-Default deployment creates only the foundation. `deployDatabricks=true` adds a workspace but no compute. `githubOwner=dockrexter` sets ADF repository metadata after repository access is established; native GitHub OAuth consent may still require the user in ADF Studio. Main is the collaboration branch; work in feature branches, PR to main, then publish/deploy. A repository link alone is not a successful connection or published pipeline.
+Outputs include `sourceStorageAccount`, `storageAccount` (the lake), `factoryName` and `resourceGroup`. Public blob access and shared-key authentication are disabled. Authenticated endpoints are publicly reachable for this learning setup. ADF gets Storage Blob Data Reader on `outbound` and Storage Blob Data Contributor on `landing`. These role assignments are definitions until deployment.
 
-ADF has a managed identity and a landing-container-scoped Storage Blob Data Contributor assignment. For a user's initial upload, that user needs a separate data role; subscription Owner alone does not necessarily grant blob data access. Never use storage account keys as a fallback. Confirm role-assignment authority before applying. RBAC propagation can take several minutes.
+## 4. Connect GitHub to the source account
 
-For first landing with Entra authentication:
+Configure a dedicated Microsoft Entra application/service principal or user-assigned identity with GitHub OIDC federation. Restrict trust to the chosen repository and `main` branch (`repo:OWNER/REPOSITORY:ref:refs/heads/main`); issuer is `https://token.actions.githubusercontent.com` and audience is `api://AzureADTokenExchange`. Avoid long-lived client secrets or storage keys.
+
+Give this publisher Storage Blob Data Contributor on the source account's **outbound container only**. Read access is needed to verify uploads. It does not need lake write access. Identity creation and this publisher role are not included in the foundation template; they are a separate setup lesson.
+
+Set these GitHub repository variables:
+
+| Variable | Value |
+|---|---|
+| `AZURE_CLIENT_ID` | Publisher application's/identity's client ID |
+| `AZURE_TENANT_ID` | Azure tenant ID |
+| `AZURE_SUBSCRIPTION_ID` | Selected subscription ID |
+| `SOURCE_STORAGE_ACCOUNT` | Source account output, not the lake |
+| `AZURE_SOURCE_PUBLISH_ENABLED` | `true` only after configuration and cost review |
+
+`azure/login@v2` obtains a short-lived token using `id-token: write`. Identifiers are not passwords. The upload script uses `az storage blob ... --auth-mode login`.
+
+For a manual smoke test from an appropriately authorized Azure CLI session:
 
 ```sh
-python3 scripts/landing.py data/outbound/SAP_S4HANA/2026-10-19 --account "$STORAGE_ACCOUNT"
+python3 scripts/publish_blob.py data/outbound/SAP_S4HANA/2026-10-19 --account "$SOURCE_STORAGE_ACCOUNT"
 ```
 
-This verifies every downloaded blob against the local source and publishes the completion marker last. This direct upload is a foundation smoke test, not an ADF/SFTP end-to-end run.
+It checks manifest hashes/counts, compares existing blobs, verifies uploaded content by read-back, and writes `_SUCCESS` last. Consumers ignore directories without the marker. Blob publication is not an atomic directory rename. An interrupted upload resumes on retry; a different existing file fails instead of being overwritten. Use one writer per source/date and keep published batches immutable.
 
-## SFTP and ADF
+## 5. Configure and test ADF ingestion
 
-Create a dedicated SSH key outside the repository; put only its public key at ignored `sftp/keys/source.pub`. Generate the bootstrap first. Run `docker compose -f sftp/compose.yaml up --build -d`. Port 2222 is localhost-only. Host keys are ephemeral in this fixture and change if the container is recreated; verify the new fingerprint explicitly. Stop with `docker compose -f sftp/compose.yaml down`.
+Publish the source definitions in dependency order with `scripts/deploy_adf.py`, or build them together in ADF Studio. The pipeline is `pl_blob_to_landing`; its parameters are `source` (SAP_S4HANA), `batchDate`, `sourceAccount` and `account` (the lake).
 
-ADF's cloud runtime cannot reach localhost. To use this fixture with ADF, provide an appropriate self-hosted integration runtime on a supported reachable host, or separately provision a reachable hardened SFTP source. The committed cloud SFTP linked service uses port 22. Change its port/connectVia for your selected runtime. Do not expose the local fixture to the internet as-is.
+The managed-identity Blob linked service reads the source account. The ADLS linked service writes landing. The pipeline checks `_SUCCESS`, copies CSVs, then manifest, then completion marker. It is serial (`concurrency: 1`). Only immutable batches may be replayed; Bronze validates checksums before processing. ADF copy success alone is not a semantic data-quality check.
 
-A real delivery service must publish each immutable date directory only after all files exist, using a staged directory and atomic rename. The GitHub generator produces artifacts and optionally publishes through `scripts/publish_sftp.py`. Configure secrets `SFTP_HOST`, `SFTP_USER`, `SFTP_PRIVATE_KEY`, `SFTP_KNOWN_HOSTS` and variables `SFTP_PORT` and `SFTP_PUBLISH_ENABLED=true`. Verify the server host key out of band; unknown keys are rejected. The remote account needs a writable `/outbound`. Publication stages and verifies files then atomically renames the date directory; conflicting existing batches fail. The localhost fixture is read-only because it serves the generator output directly. GitHub cron is best effort; manually dispatch missed business dates. Bootstrap once before daily consumption. Artifact retention is not a permanent ERP archive.
+Run one manual bootstrap ingestion and inspect the activity results and landing files. Native ADF GitHub authorization is a separate setup: `githubOwner` in Bicep supplies repository metadata, but does not grant OAuth consent. Main is the collaboration branch and `/adf` is the root. Source control and publishing to the live factory are distinct.
 
-Store the SFTP private key as a Key Vault secret (the base64 private-key content expected by ADF). Supply host, username, verified host-key fingerprint, vault URL and secret name as pipeline parameters. Grant ADF read access only to the needed secret. No secrets belong in JSON or workflow files. The Key Vault and SFTP host are not created by this foundation.
+## 6. Activate end-to-end daily delivery
 
-Deploy ADF JSON in dependency order: linkedService, dataset, pipeline, after replacing/configuring environment-specific parameters in Studio. The pipeline checks `_SUCCESS`, copies CSVs, then manifest, then marker. No trigger is supplied or started. Run one manual batch and inspect its activity result and landed hashes before adding a daily trigger. Published ADF runs and Git authoring are separate states.
+The GitHub workflow can start ADF **after a successful upload**, avoiding a second independent clock. For this step, grant the publisher identity a custom role scoped to the dedicated factory with these actions: `Microsoft.DataFactory/factories/pipelines/createRun/action` and `Microsoft.DataFactory/factories/pipelineruns/read`. Configure the role and verify it in a manual test before enabling automation; it is not deployed by the foundation template.
 
-## Databricks
+Additional variables: `AZURE_RESOURCE_GROUP`, `ADF_FACTORY`, `LANDING_STORAGE_ACCOUNT`, and `ADF_RUN_ENABLED=true`. `scripts/run_adf.py` takes the source/date from the batch manifest, starts the copy and monitors its status. Failures fail the workflow. A monitoring timeout does not cancel the Azure run: inspect the displayed run ID before retrying. No Databricks run is triggered by this workflow.
 
-Set the host with the CLI's supported authentication; configure a dedicated storage identity/external location with landing read and Bronze write access. Validate `databricks bundle validate` with `cluster_id`, `landing_path` and `bronze_path` variables, then deploy. The existing cluster must have suitable runtime/Delta/storage configuration. No cluster is created by this bundle. Running the job starts billable compute if the chosen cluster is stopped. Validate checksums and counts, then inspect the Bronze receipt. Silver, Gold and Power BI transformations are next-phase work.
+After the bootstrap and needed backfill dates have landed, set `DAILY_GENERATION_ENABLED=true`. Keep all switches off until the preceding lessons are complete. To pause, unset the generation or publication switch. Existing cloud storage remains billable until removed or emptied appropriately.
+
+## 7. Later: Databricks and reporting
+
+Configure Databricks authentication, an existing cluster and storage access. Validate the bundle with `cluster_id`, `landing_path` and `bronze_path`, then deploy and run when ready. The bundle does not create compute; running a job can start billable compute. Bronze verifies all file checksums/counts, replaces source/date partitions on replay and writes a final receipt. Silver, Gold and Power BI are later learning stages.
+
+## Official references
+
+- https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-azure
+- https://github.com/Azure/login
+- https://learn.microsoft.com/en-us/azure/data-factory/connector-azure-blob-storage
+- https://learn.microsoft.com/en-us/azure/data-factory/connector-azure-data-lake-storage
 
 ## Cleanup
 
-Stop workloads first; review what is in `rg-procureflow-dev` before deleting the group through Azure. Deleting storage destroys data; download anything needed. If Databricks was enabled, review its managed resource group too. Do not delete unrelated resources or disable subscription protection.
+Review resources and preserve needed data before deleting the project resource group. Never remove unrelated resources or turn off subscription spending protection as a shortcut. GitHub repository deletion is a separate action and has not been completed.

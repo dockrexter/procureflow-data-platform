@@ -1,5 +1,5 @@
 {
-  "name": "pl_sftp_to_landing",
+  "name": "pl_blob_to_landing",
   "properties": {
     "parameters": {
       "source": {
@@ -12,19 +12,7 @@
       "account": {
         "type": "String"
       },
-      "host": {
-        "type": "String"
-      },
-      "user": {
-        "type": "String"
-      },
-      "fingerprint": {
-        "type": "String"
-      },
-      "vaultUrl": {
-        "type": "String"
-      },
-      "secretName": {
+      "sourceAccount": {
         "type": "String"
       }
     },
@@ -35,41 +23,25 @@
         "type": "GetMetadata",
         "typeProperties": {
           "dataset": {
-            "referenceName": "ds_sftp",
+            "referenceName": "ds_source_blob",
             "type": "DatasetReference",
             "parameters": {
-              "host": {
-                "value": "@pipeline().parameters.host",
-                "type": "Expression"
-              },
-              "user": {
-                "value": "@pipeline().parameters.user",
-                "type": "Expression"
-              },
-              "fingerprint": {
-                "value": "@pipeline().parameters.fingerprint",
-                "type": "Expression"
-              },
-              "vaultUrl": {
-                "value": "@pipeline().parameters.vaultUrl",
-                "type": "Expression"
-              },
-              "secretName": {
-                "value": "@pipeline().parameters.secretName",
-                "type": "Expression"
-              },
               "path": {
                 "value": "@concat(pipeline().parameters.source, '/', pipeline().parameters.batchDate)",
                 "type": "Expression"
               },
-              "file": "_SUCCESS"
+              "file": "_SUCCESS",
+              "account": {
+                "value": "@pipeline().parameters.sourceAccount",
+                "type": "Expression"
+              }
             }
           },
           "fieldList": [
             "exists"
           ],
           "storeSettings": {
-            "type": "SftpReadSettings"
+            "type": "AzureBlobStorageReadSettings"
           }
         }
       },
@@ -100,34 +72,18 @@
               },
               "inputs": [
                 {
-                  "referenceName": "ds_sftp",
+                  "referenceName": "ds_source_blob",
                   "type": "DatasetReference",
                   "parameters": {
-                    "host": {
-                      "value": "@pipeline().parameters.host",
-                      "type": "Expression"
-                    },
-                    "user": {
-                      "value": "@pipeline().parameters.user",
-                      "type": "Expression"
-                    },
-                    "fingerprint": {
-                      "value": "@pipeline().parameters.fingerprint",
-                      "type": "Expression"
-                    },
-                    "vaultUrl": {
-                      "value": "@pipeline().parameters.vaultUrl",
-                      "type": "Expression"
-                    },
-                    "secretName": {
-                      "value": "@pipeline().parameters.secretName",
-                      "type": "Expression"
-                    },
                     "path": {
                       "value": "@concat(pipeline().parameters.source, '/', pipeline().parameters.batchDate)",
                       "type": "Expression"
                     },
-                    "file": ""
+                    "file": "",
+                    "account": {
+                      "value": "@pipeline().parameters.sourceAccount",
+                      "type": "Expression"
+                    }
                   }
                 }
               ],
@@ -152,9 +108,8 @@
                 "source": {
                   "type": "BinarySource",
                   "storeSettings": {
-                    "type": "SftpReadSettings",
+                    "type": "AzureBlobStorageReadSettings",
                     "recursive": false,
-                    "disableChunking": true,
                     "wildcardFileName": "*.csv"
                   }
                 },
@@ -178,34 +133,18 @@
               },
               "inputs": [
                 {
-                  "referenceName": "ds_sftp",
+                  "referenceName": "ds_source_blob",
                   "type": "DatasetReference",
                   "parameters": {
-                    "host": {
-                      "value": "@pipeline().parameters.host",
-                      "type": "Expression"
-                    },
-                    "user": {
-                      "value": "@pipeline().parameters.user",
-                      "type": "Expression"
-                    },
-                    "fingerprint": {
-                      "value": "@pipeline().parameters.fingerprint",
-                      "type": "Expression"
-                    },
-                    "vaultUrl": {
-                      "value": "@pipeline().parameters.vaultUrl",
-                      "type": "Expression"
-                    },
-                    "secretName": {
-                      "value": "@pipeline().parameters.secretName",
-                      "type": "Expression"
-                    },
                     "path": {
                       "value": "@concat(pipeline().parameters.source, '/', pipeline().parameters.batchDate)",
                       "type": "Expression"
                     },
-                    "file": "manifest.json"
+                    "file": "manifest.json",
+                    "account": {
+                      "value": "@pipeline().parameters.sourceAccount",
+                      "type": "Expression"
+                    }
                   }
                 }
               ],
@@ -230,9 +169,8 @@
                 "source": {
                   "type": "BinarySource",
                   "storeSettings": {
-                    "type": "SftpReadSettings",
-                    "recursive": false,
-                    "disableChunking": true
+                    "type": "AzureBlobStorageReadSettings",
+                    "recursive": false
                   }
                 },
                 "sink": {
@@ -263,34 +201,18 @@
               },
               "inputs": [
                 {
-                  "referenceName": "ds_sftp",
+                  "referenceName": "ds_source_blob",
                   "type": "DatasetReference",
                   "parameters": {
-                    "host": {
-                      "value": "@pipeline().parameters.host",
-                      "type": "Expression"
-                    },
-                    "user": {
-                      "value": "@pipeline().parameters.user",
-                      "type": "Expression"
-                    },
-                    "fingerprint": {
-                      "value": "@pipeline().parameters.fingerprint",
-                      "type": "Expression"
-                    },
-                    "vaultUrl": {
-                      "value": "@pipeline().parameters.vaultUrl",
-                      "type": "Expression"
-                    },
-                    "secretName": {
-                      "value": "@pipeline().parameters.secretName",
-                      "type": "Expression"
-                    },
                     "path": {
                       "value": "@concat(pipeline().parameters.source, '/', pipeline().parameters.batchDate)",
                       "type": "Expression"
                     },
-                    "file": "_SUCCESS"
+                    "file": "_SUCCESS",
+                    "account": {
+                      "value": "@pipeline().parameters.sourceAccount",
+                      "type": "Expression"
+                    }
                   }
                 }
               ],
@@ -315,9 +237,8 @@
                 "source": {
                   "type": "BinarySource",
                   "storeSettings": {
-                    "type": "SftpReadSettings",
-                    "recursive": false,
-                    "disableChunking": true
+                    "type": "AzureBlobStorageReadSettings",
+                    "recursive": false
                   }
                 },
                 "sink": {

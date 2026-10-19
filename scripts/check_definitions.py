@@ -14,6 +14,4 @@ for p in (root/'adf').rglob('*.json'):
         elif isinstance(obj,list):
             for v in obj:walk(v)
     walk(data)
-    if data['properties'].get('type')=='Sftp':
-        assert data['properties']['typeProperties']['skipHostKeyValidation'] is False
 print('ADF JSON and resource references valid')

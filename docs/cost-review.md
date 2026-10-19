@@ -1,4 +1,6 @@
-# Azure trial cost review — 2026-10-19
+# Azure cost review — historical trial observations
+
+Architecture updated locally to GitHub Actions → source Blob Storage → ADF → ADLS. No new billing check or deployment was performed during this change. Refresh the observations below before provisioning.
 
 Observed in the signed-in Azure portal before provisioning: the selected trial subscription is active, user is Owner, the portal notification shows EUR 175.99 credit remaining; subscription overview shows USD 200 remaining with 29 days to expiry, current cost 0.00 and no active resource usage. These are portal displays in different currencies, not a calculated conversion. The account also has another subscription with the same display name; deployment must use the explicit selected trial subscription ID locally.
 
@@ -6,10 +8,11 @@ Cloud Shell read-only subscription API also confirmed FreeTrial_2014-09-01, stat
 
 Exposure by component:
 - Resource group: organizational container.
+- Source Blob Storage Standard LRS: a separate account and outbound container add metered stored bytes and operations. GitHub uploads and read-back verification produce storage operations; ADF reads add more. No always-on server is required.
 - ADLS Standard LRS: stored bytes, storage operations and applicable transfer are metered. Public blob access, shared keys and native storage SFTP are disabled. The authenticated network endpoint is public for this learning environment; production should use private networking.
 - ADF: copy activity/orchestration and integration runtime use are metered. No trigger or mapping-data-flow session is activated.
 - Databricks: workspace definition is optional and off by default. No cluster, SQL warehouse, serverless task or scheduled job is started. Running the bundle later incurs compute charges.
-- SFTP: localhost container only; there is no Azure SFTP hourly endpoint or cloud VM in the default deployment.
+- No SFTP service, Docker host or cloud VM is part of the revised design.
 - GitHub private Actions: subject to the account's included minutes/storage and billing settings. Artifacts expire after 30 days; no unlimited retention is implied.
 
 There is no guaranteed zero-cost promise and no fixed monetary estimate without region-specific meters and verified runtime quantities. Budgets notify and do not act as a hard spending cap. The trial spending limit protects most covered usage, but not every Marketplace purchase; no Marketplace products are needed here.

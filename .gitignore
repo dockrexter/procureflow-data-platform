@@ -13,6 +13,4 @@ data/
 *.local.bicepparam
 .azure/
 .databricks/
-sftp/keys/
-sftp/host-keys/
 build/

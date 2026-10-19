@@ -19,7 +19,12 @@ concurrency:
   cancel-in-progress: false
 jobs:
   generate:
+    # Learning mode: scheduled runs stay disabled until explicitly configured.
+    if: github.event_name == 'workflow_dispatch' || vars.DAILY_GENERATION_ENABLED == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -29,24 +34,37 @@ jobs:
         env:
           BATCH_DATE: ${{ inputs.date }}
           BATCH_MODE: ${{ inputs.mode }}
-        run: |
-          python scripts/scheduled_generate.py
+        run: python scripts/scheduled_generate.py
       - uses: actions/upload-artifact@v4
         with:
           name: sap-s4hana-${{ github.run_id }}
           path: data/outbound/
           retention-days: 30
           if-no-files-found: error
-      - name: Publish to configured SFTP source
-        if: vars.SFTP_PUBLISH_ENABLED == 'true'
+      - name: Sign in to Azure using short-lived credentials
+        if: vars.AZURE_SOURCE_PUBLISH_ENABLED == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Publish source batch
+        if: vars.AZURE_SOURCE_PUBLISH_ENABLED == 'true'
         env:
-          SFTP_HOST: ${{ secrets.SFTP_HOST }}
-          SFTP_PORT: ${{ vars.SFTP_PORT || '22' }}
-          SFTP_USER: ${{ secrets.SFTP_USER }}
-          SFTP_PRIVATE_KEY: ${{ secrets.SFTP_PRIVATE_KEY }}
-          SFTP_KNOWN_HOSTS: ${{ secrets.SFTP_KNOWN_HOSTS }}
+          SOURCE_STORAGE_ACCOUNT: ${{ vars.SOURCE_STORAGE_ACCOUNT }}
         run: |
-          python -m pip install -r sftp/requirements.txt
           for batch in data/outbound/SAP_S4HANA/*; do
-            python scripts/publish_sftp.py "$batch"
+            python scripts/publish_blob.py "$batch" --account "$SOURCE_STORAGE_ACCOUNT"
+          done
+      - name: Ingest completed batch with ADF
+        if: vars.AZURE_SOURCE_PUBLISH_ENABLED == 'true' && vars.ADF_RUN_ENABLED == 'true'
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          ADF_FACTORY: ${{ vars.ADF_FACTORY }}
+          SOURCE_STORAGE_ACCOUNT: ${{ vars.SOURCE_STORAGE_ACCOUNT }}
+          LANDING_STORAGE_ACCOUNT: ${{ vars.LANDING_STORAGE_ACCOUNT }}
+        run: |
+          for batch in data/outbound/SAP_S4HANA/*; do
+            python scripts/run_adf.py "$batch"
           done
