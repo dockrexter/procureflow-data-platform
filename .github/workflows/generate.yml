@@ -46,7 +46,7 @@ jobs:
       - name: Save downloadable batch
         uses: actions/upload-artifact@v4
         with:
-          name: sap-s4hana-${{ github.run_id }}
+          name: sap-s4hana-${{ github.run_id }}-${{ github.run_attempt }}
           path: data/outbound/
           retention-days: 7
           if-no-files-found: error

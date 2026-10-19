@@ -27,3 +27,5 @@ GitHub supplies a temporary computer. It generates and validates CSVs, retains a
 The managed identity `id-procureflow-github-upload` trusts only this repository's main branch and receives Storage Blob Data Contributor only on the source outbound container. The workflow contains public resource identifiers, not passwords or storage keys. ADF Git integration is separate and is preserved.
 
 Official instructions: [manual runs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow), [cancelling runs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/cancel-a-workflow-run).
+
+The observed GitHub OIDC subject includes immutable owner/repository IDs: `repo:dockrexter@31271324/procureflow-data-platform@1425443797:ref:refs/heads/main`. Azure's trust record must match this exactly; it is not a password.
