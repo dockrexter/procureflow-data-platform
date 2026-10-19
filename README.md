@@ -3,7 +3,7 @@
 A learning project: synthetic SAP-style procurement data, independent daily delivery, and an Azure data platform. You will configure and activate each stage step by step. These extracts are simplified simulations, not a real SAP connector.
 
 ```text
-Future GitHub Actions: Python generator (currently inactive)
+GitHub Actions: manually started Python generator
     ↓ verified upload, completion marker last
 Azure source Blob Storage: outbound/SAP_S4HANA/YYYY-MM-DD/
     ↓ Azure Data Factory
@@ -37,7 +37,7 @@ Bootstrap includes 90 days of history, 5 companies, 20 plants, 10 purchasing org
 | `scripts/` | Direct storage uploads and validation |
 | `adf/` | Blob-source linked service, datasets and copy pipeline |
 | `databricks/` | Bronze processing code and job configuration |
-| `.github/workflows/` | Code checks only; no generation or deployment |
+| `.github/workflows/` | Code checks and a manually started generation/upload workflow |
 | `tests/` | Automated checks for correctness and delivery failures |
 | `docs/` | Data contract, learning steps, costs and actual status |
 | `powerbi/` | Reserved for later reporting work |
@@ -48,6 +48,6 @@ Bootstrap includes 90 days of history, 5 companies, 20 plants, 10 purchasing org
 
 Azure resources already exist. Manage them through the Azure portal; infrastructure templates and deployment scripts have been removed. ADF is connected to Git by the user; build and publish the pipeline in ADF Studio.
 
-Generation/upload automation is **inactive**: its example lives at `docs/templates/generate-upload.yml.example`, outside GitHub's workflow folder. There is no generation schedule or manual generation workflow. CI only validates code. The future uploader sends generated files directly to source Blob Storage and does not start ADF.
+Generation/upload is **manual only**: open GitHub Actions → Generate and upload (manual) → Run workflow. Choose a business date, bootstrap/daily, and generate_only/generate_and_upload. Use Cancel workflow on an active run to stop it. There is no daily schedule and no ADF execution.
 
-Complete the pipeline before activating any upload workflow. Existing Azure resources have not been deleted; storage remains subject to charges. See [learning steps](docs/runbook.md), [data contract](docs/data-contract.md), [cost review](docs/cost-review.md), and [verified status](docs/sprint-status.md).
+See [manual controls](docs/manual-generation.md). Existing Azure resources have not been deleted; storage remains subject to charges. See [learning steps](docs/runbook.md), [data contract](docs/data-contract.md), [cost review](docs/cost-review.md), and [verified status](docs/sprint-status.md).

@@ -17,20 +17,18 @@ python3 data-generator/generate.py daily --date 2026-10-20
 
 The epoch and seed are fixed in config/sap_s4hana.json. Bootstrap uses the epoch; daily batches follow it. Generate backfills in date order. Local generation does not upload data.
 
-## Upload only after completing the pipeline
+## Upload source data for pipeline development
 
 The retained uploader uses Azure CLI login, checks file hashes and row counts, verifies uploaded bytes, and writes `_SUCCESS` last. Identical retries are accepted; conflicting files are not overwritten. The future publisher needs Storage Blob Data Contributor on the source outbound container, not subscription-wide access.
 
-Do not execute uploads yet. When ready, the command is:
+The user has enabled manual generation and source uploads for pipeline development. The equivalent command is:
 
 ```sh
 python3 scripts/publish_blob.py data/outbound/SAP_S4HANA/2026-10-19 --account pfsrcywlye2bmne5kc
 ```
 
-## Future laptop-independent automation
+## Manual laptop-independent automation
 
-`docs/templates/generate-upload.yml.example` is an inactive example, not an executable GitHub workflow. It generates data and uploads directly to Blob Storage, with no ADF invocation. It currently has no schedule. Keep it outside `.github/workflows/` until the complete pipeline has been built and tested.
+Use [manual generation controls](manual-generation.md) to start or cancel a batch in GitHub. The active workflow offers generate_only and generate_and_upload and has no schedule. It never starts ADF. The older inactive template was removed to keep one source of truth.
 
-Later, configure GitHub-to-Azure OIDC and repository variables AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, SOURCE_STORAGE_ACCOUNT and AZURE_SOURCE_PUBLISH_ENABLED. Do not store passwords or storage keys in Git. Only then move the template into the workflows folder and test an explicit bootstrap date. Add daily scheduling as a separate final step. Missed dates require explicit replay.
-
-`.github/workflows/ci.yml` only runs validation; it neither generates production batches nor uploads, provisions or runs ADF. Databricks configuration is retained for a later lesson and is not deployed.
+`.github/workflows/ci.yml` runs validation separately on code changes. Databricks configuration is retained for a later lesson and is not deployed.

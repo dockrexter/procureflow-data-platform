@@ -1,0 +1,29 @@
+# Start and stop generation/upload manually
+
+Open https://github.com/dockrexter/procureflow-data-platform/actions/workflows/generate.yml.
+
+## Start
+
+1. Click **Run workflow**, keeping branch **main**.
+2. Choose **bootstrap** with date **2026-10-19** for the initial history.
+3. For later batches choose **daily** with a date after the epoch, for example **2026-10-20**. Generate each date in order; the workflow does not fill missed dates automatically.
+4. Choose **generate_and_upload** to put the batch in Azure source storage, or **generate_only** to produce a downloadable artifact without uploading.
+5. Click **Run workflow** and open the run to follow its steps.
+
+The source path is `pfsrcywlye2bmne5kc / outbound / SAP_S4HANA / YYYY-MM-DD /`. The workflow does not run ADF or Databricks. No clock/schedule starts it. A completed run is stopped automatically; each click requests one batch, not a continuously running service.
+
+## Stop
+
+Open the running workflow and click **Cancel workflow**. Cancellation is not instantaneous and does not roll back files already uploaded. If the upload completed before cancellation, the batch remains complete.
+
+A cancelled partial upload has no `_SUCCESS` marker and must not be ingested. Retry using the same date, mode, seed and configuration: identical existing files are accepted and missing files are uploaded. Conflicting content causes failure rather than overwrite. Do not change generator/configuration for an already published date.
+
+To prevent all future starts, use the workflow page's **… → Disable workflow**. Enable it again when ready. Disabling does not cancel an already running job: cancel that separately. Only one run is allowed to execute at a time; avoid queuing multiple dates and expect explicit replay if a pending run is replaced.
+
+## What runs where
+
+GitHub supplies a temporary computer. It generates and validates CSVs, retains a downloadable artifact for seven days, then authenticates through Azure OIDC and uploads when selected. No laptop needs to stay on. Storage and GitHub Actions usage remain subject to their normal charges/allowances.
+
+The managed identity `id-procureflow-github-upload` trusts only this repository's main branch and receives Storage Blob Data Contributor only on the source outbound container. The workflow contains public resource identifiers, not passwords or storage keys. ADF Git integration is separate and is preserved.
+
+Official instructions: [manual runs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow), [cancelling runs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/cancel-a-workflow-run).
