@@ -27,6 +27,6 @@ The bootstrap contains 90 days of history, 5 companies, 20 plants, 10 purchasing
 - `.github/workflows/`: tests, infrastructure compilation, daily source artifacts.
 - `docs/`: contracts, costs, operation and actual sprint status.
 
-Generated data and credentials are ignored by Git. The scheduled source workflow produces retained GitHub Actions artifacts; it does **not** claim to be an operational SFTP delivery service. A reachable SFTP host is a separate deployment prerequisite. No Azure deployment is performed by a push or scheduled workflow.
+Generated data and credentials are ignored by Git. The scheduled source workflow produces retained GitHub Actions artifacts; optional atomic SFTP publication activates only when `SFTP_PUBLISH_ENABLED=true` and the documented secrets are configured. No SFTP host is connected yet. No Azure deployment is performed by a push or scheduled workflow.
 
 See [data contract](docs/data-contract.md), [runbook](docs/runbook.md), [cost review](docs/cost-review.md) and [sprint status](docs/sprint-status.md).
