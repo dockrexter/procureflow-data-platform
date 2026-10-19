@@ -1,0 +1,15 @@
+{
+	"name": "adf-procureflow-ywlye2bmne5kc",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "northeurope",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "8c1a387b-db5d-408f-95f6-fa902daef095",
+		"tenantId": "0bfae774-6764-417a-9602-94c5eacc6c24"
+	}
+}
