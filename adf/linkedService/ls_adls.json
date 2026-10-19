@@ -1,0 +1,17 @@
+{
+  "name": "ls_adls",
+  "properties": {
+    "parameters": {
+      "account": {
+        "type": "String"
+      }
+    },
+    "type": "AzureBlobFS",
+    "typeProperties": {
+      "url": {
+        "value": "@concat('https://',linkedService().account,'.dfs.core.windows.net')",
+        "type": "Expression"
+      }
+    }
+  }
+}

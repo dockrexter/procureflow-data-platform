@@ -1,0 +1,356 @@
+{
+  "name": "pl_sftp_to_landing",
+  "properties": {
+    "parameters": {
+      "source": {
+        "type": "String",
+        "defaultValue": "SAP_S4HANA"
+      },
+      "batchDate": {
+        "type": "String"
+      },
+      "account": {
+        "type": "String"
+      },
+      "host": {
+        "type": "String"
+      },
+      "user": {
+        "type": "String"
+      },
+      "fingerprint": {
+        "type": "String"
+      },
+      "vaultUrl": {
+        "type": "String"
+      },
+      "secretName": {
+        "type": "String"
+      }
+    },
+    "concurrency": 1,
+    "activities": [
+      {
+        "name": "CheckComplete",
+        "type": "GetMetadata",
+        "typeProperties": {
+          "dataset": {
+            "referenceName": "ds_sftp",
+            "type": "DatasetReference",
+            "parameters": {
+              "host": {
+                "value": "@pipeline().parameters.host",
+                "type": "Expression"
+              },
+              "user": {
+                "value": "@pipeline().parameters.user",
+                "type": "Expression"
+              },
+              "fingerprint": {
+                "value": "@pipeline().parameters.fingerprint",
+                "type": "Expression"
+              },
+              "vaultUrl": {
+                "value": "@pipeline().parameters.vaultUrl",
+                "type": "Expression"
+              },
+              "secretName": {
+                "value": "@pipeline().parameters.secretName",
+                "type": "Expression"
+              },
+              "path": {
+                "value": "@concat(pipeline().parameters.source, '/', pipeline().parameters.batchDate)",
+                "type": "Expression"
+              },
+              "file": "_SUCCESS"
+            }
+          },
+          "fieldList": [
+            "exists"
+          ],
+          "storeSettings": {
+            "type": "SftpReadSettings"
+          }
+        }
+      },
+      {
+        "name": "RequireComplete",
+        "type": "IfCondition",
+        "dependsOn": [
+          {
+            "activity": "CheckComplete",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "typeProperties": {
+          "expression": {
+            "value": "@activity('CheckComplete').output.exists",
+            "type": "Expression"
+          },
+          "ifTrueActivities": [
+            {
+              "name": "CopyData",
+              "type": "Copy",
+              "policy": {
+                "timeout": "0.00:20:00",
+                "retry": 2,
+                "retryIntervalInSeconds": 30
+              },
+              "inputs": [
+                {
+                  "referenceName": "ds_sftp",
+                  "type": "DatasetReference",
+                  "parameters": {
+                    "host": {
+                      "value": "@pipeline().parameters.host",
+                      "type": "Expression"
+                    },
+                    "user": {
+                      "value": "@pipeline().parameters.user",
+                      "type": "Expression"
+                    },
+                    "fingerprint": {
+                      "value": "@pipeline().parameters.fingerprint",
+                      "type": "Expression"
+                    },
+                    "vaultUrl": {
+                      "value": "@pipeline().parameters.vaultUrl",
+                      "type": "Expression"
+                    },
+                    "secretName": {
+                      "value": "@pipeline().parameters.secretName",
+                      "type": "Expression"
+                    },
+                    "path": {
+                      "value": "@concat(pipeline().parameters.source, '/', pipeline().parameters.batchDate)",
+                      "type": "Expression"
+                    },
+                    "file": ""
+                  }
+                }
+              ],
+              "outputs": [
+                {
+                  "referenceName": "ds_landing",
+                  "type": "DatasetReference",
+                  "parameters": {
+                    "account": {
+                      "value": "@pipeline().parameters.account",
+                      "type": "Expression"
+                    },
+                    "path": {
+                      "value": "@concat(pipeline().parameters.source, '/', pipeline().parameters.batchDate)",
+                      "type": "Expression"
+                    },
+                    "file": ""
+                  }
+                }
+              ],
+              "typeProperties": {
+                "source": {
+                  "type": "BinarySource",
+                  "storeSettings": {
+                    "type": "SftpReadSettings",
+                    "recursive": false,
+                    "disableChunking": true,
+                    "wildcardFileName": "*.csv"
+                  }
+                },
+                "sink": {
+                  "type": "BinarySink",
+                  "storeSettings": {
+                    "type": "AzureBlobFSWriteSettings",
+                    "copyBehavior": "PreserveHierarchy"
+                  }
+                },
+                "enableStaging": false
+              }
+            },
+            {
+              "name": "CopyManifest",
+              "type": "Copy",
+              "policy": {
+                "timeout": "0.00:20:00",
+                "retry": 2,
+                "retryIntervalInSeconds": 30
+              },
+              "inputs": [
+                {
+                  "referenceName": "ds_sftp",
+                  "type": "DatasetReference",
+                  "parameters": {
+                    "host": {
+                      "value": "@pipeline().parameters.host",
+                      "type": "Expression"
+                    },
+                    "user": {
+                      "value": "@pipeline().parameters.user",
+                      "type": "Expression"
+                    },
+                    "fingerprint": {
+                      "value": "@pipeline().parameters.fingerprint",
+                      "type": "Expression"
+                    },
+                    "vaultUrl": {
+                      "value": "@pipeline().parameters.vaultUrl",
+                      "type": "Expression"
+                    },
+                    "secretName": {
+                      "value": "@pipeline().parameters.secretName",
+                      "type": "Expression"
+                    },
+                    "path": {
+                      "value": "@concat(pipeline().parameters.source, '/', pipeline().parameters.batchDate)",
+                      "type": "Expression"
+                    },
+                    "file": "manifest.json"
+                  }
+                }
+              ],
+              "outputs": [
+                {
+                  "referenceName": "ds_landing",
+                  "type": "DatasetReference",
+                  "parameters": {
+                    "account": {
+                      "value": "@pipeline().parameters.account",
+                      "type": "Expression"
+                    },
+                    "path": {
+                      "value": "@concat(pipeline().parameters.source, '/', pipeline().parameters.batchDate)",
+                      "type": "Expression"
+                    },
+                    "file": "manifest.json"
+                  }
+                }
+              ],
+              "typeProperties": {
+                "source": {
+                  "type": "BinarySource",
+                  "storeSettings": {
+                    "type": "SftpReadSettings",
+                    "recursive": false,
+                    "disableChunking": true
+                  }
+                },
+                "sink": {
+                  "type": "BinarySink",
+                  "storeSettings": {
+                    "type": "AzureBlobFSWriteSettings",
+                    "copyBehavior": "PreserveHierarchy"
+                  }
+                },
+                "enableStaging": false
+              },
+              "dependsOn": [
+                {
+                  "activity": "CopyData",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "CommitBatch",
+              "type": "Copy",
+              "policy": {
+                "timeout": "0.00:20:00",
+                "retry": 2,
+                "retryIntervalInSeconds": 30
+              },
+              "inputs": [
+                {
+                  "referenceName": "ds_sftp",
+                  "type": "DatasetReference",
+                  "parameters": {
+                    "host": {
+                      "value": "@pipeline().parameters.host",
+                      "type": "Expression"
+                    },
+                    "user": {
+                      "value": "@pipeline().parameters.user",
+                      "type": "Expression"
+                    },
+                    "fingerprint": {
+                      "value": "@pipeline().parameters.fingerprint",
+                      "type": "Expression"
+                    },
+                    "vaultUrl": {
+                      "value": "@pipeline().parameters.vaultUrl",
+                      "type": "Expression"
+                    },
+                    "secretName": {
+                      "value": "@pipeline().parameters.secretName",
+                      "type": "Expression"
+                    },
+                    "path": {
+                      "value": "@concat(pipeline().parameters.source, '/', pipeline().parameters.batchDate)",
+                      "type": "Expression"
+                    },
+                    "file": "_SUCCESS"
+                  }
+                }
+              ],
+              "outputs": [
+                {
+                  "referenceName": "ds_landing",
+                  "type": "DatasetReference",
+                  "parameters": {
+                    "account": {
+                      "value": "@pipeline().parameters.account",
+                      "type": "Expression"
+                    },
+                    "path": {
+                      "value": "@concat(pipeline().parameters.source, '/', pipeline().parameters.batchDate)",
+                      "type": "Expression"
+                    },
+                    "file": "_SUCCESS"
+                  }
+                }
+              ],
+              "typeProperties": {
+                "source": {
+                  "type": "BinarySource",
+                  "storeSettings": {
+                    "type": "SftpReadSettings",
+                    "recursive": false,
+                    "disableChunking": true
+                  }
+                },
+                "sink": {
+                  "type": "BinarySink",
+                  "storeSettings": {
+                    "type": "AzureBlobFSWriteSettings",
+                    "copyBehavior": "PreserveHierarchy"
+                  }
+                },
+                "enableStaging": false
+              },
+              "dependsOn": [
+                {
+                  "activity": "CopyManifest",
+                  "dependencyConditions": [
+                    "Succeeded"
+                  ]
+                }
+              ]
+            }
+          ],
+          "ifFalseActivities": [
+            {
+              "name": "IncompleteBatch",
+              "type": "Fail",
+              "typeProperties": {
+                "message": "Source batch has no completion marker",
+                "errorCode": "INCOMPLETE_BATCH"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

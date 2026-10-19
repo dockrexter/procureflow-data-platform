@@ -1,0 +1,75 @@
+{
+  "name": "ds_sftp",
+  "properties": {
+    "type": "Binary",
+    "parameters": {
+      "path": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "file": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "host": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "user": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "fingerprint": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "vaultUrl": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "secretName": {
+        "type": "String",
+        "defaultValue": ""
+      }
+    },
+    "linkedServiceName": {
+      "referenceName": "ls_sftp",
+      "type": "LinkedServiceReference",
+      "parameters": {
+        "host": {
+          "value": "@dataset().host",
+          "type": "Expression"
+        },
+        "user": {
+          "value": "@dataset().user",
+          "type": "Expression"
+        },
+        "fingerprint": {
+          "value": "@dataset().fingerprint",
+          "type": "Expression"
+        },
+        "vaultUrl": {
+          "value": "@dataset().vaultUrl",
+          "type": "Expression"
+        },
+        "secretName": {
+          "value": "@dataset().secretName",
+          "type": "Expression"
+        }
+      }
+    },
+    "typeProperties": {
+      "location": {
+        "type": "SftpLocation",
+        "folderPath": {
+          "value": "@concat('outbound/', dataset().path)",
+          "type": "Expression"
+        },
+        "fileName": {
+          "value": "@dataset().file",
+          "type": "Expression"
+        }
+      }
+    }
+  }
+}

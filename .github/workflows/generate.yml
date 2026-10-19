@@ -1,0 +1,39 @@
+name: Generate source batch
+on:
+  schedule:
+    - cron: '15 3 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Business date YYYY-MM-DD (empty means UTC today)'
+        type: string
+      mode:
+        description: Batch type
+        type: choice
+        options: [daily, bootstrap]
+        default: daily
+permissions:
+  contents: read
+concurrency:
+  group: source-generator
+  cancel-in-progress: false
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate and validate
+        env:
+          BATCH_DATE: ${{ inputs.date }}
+          BATCH_MODE: ${{ inputs.mode }}
+        run: |
+          python scripts/scheduled_generate.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sap-s4hana-${{ github.run_id }}
+          path: data/outbound/
+          retention-days: 30
+          if-no-files-found: error
