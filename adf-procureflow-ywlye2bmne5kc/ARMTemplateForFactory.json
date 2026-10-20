@@ -1,0 +1,827 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "adf-procureflow-ywlye2bmne5kc"
+		},
+		"ls_adls_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://procureflowywlye2bmne5kc.dfs.core.windows.net"
+		},
+		"ls_source_blob_properties_typeProperties_serviceEndpoint": {
+			"type": "string",
+			"defaultValue": "@concat('https://',linkedService().account,'.blob.core.windows.net/')"
+		},
+		"trigger1_properties_pl_blob_to_landing_parameters_source": {
+			"type": "string",
+			"defaultValue": "SAP_S4HANA"
+		},
+		"trigger1_properties_pl_blob_to_landing_parameters_account": {
+			"type": "string",
+			"defaultValue": "procureflowywlye2bmne5kc"
+		},
+		"trigger1_properties_pl_blob_to_landing_parameters_sourceAccount": {
+			"type": "string",
+			"defaultValue": "pfsrcywlye2bmne5kc"
+		},
+		"trigger1_properties_typeProperties_scope": {
+			"type": "string",
+			"defaultValue": "/subscriptions/c3cc8c7c-2add-46ef-b570-46b02f846e70/resourceGroups/rg-procureflow-dev/providers/Microsoft.Storage/storageAccounts/pfsrcywlye2bmne5kc"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_blob_to_landing')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Copy fixed filenames from a flat source folder; archive by manifest business date. Do not overlap uploads and ingestion.",
+				"activities": [
+					{
+						"name": "CheckComplete",
+						"type": "GetMetadata",
+						"dependsOn": [],
+						"policy": {
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_source_blob",
+								"type": "DatasetReference",
+								"parameters": {
+									"path": {
+										"value": "@pipeline().parameters.source",
+										"type": "Expression"
+									},
+									"file": "_SUCCESS",
+									"account": {
+										"value": "@pipeline().parameters.sourceAccount",
+										"type": "Expression"
+									}
+								}
+							},
+							"fieldList": [
+								"exists"
+							],
+							"storeSettings": {
+								"type": "AzureBlobStorageReadSettings",
+								"recursive": false
+							}
+						}
+					},
+					{
+						"name": "RequireComplete",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "CheckComplete",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@activity('CheckComplete').output.exists",
+								"type": "Expression"
+							},
+							"ifFalseActivities": [
+								{
+									"name": "IncompleteBatch",
+									"type": "Fail",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"message": "Source has no completion marker; finish uploading first",
+										"errorCode": "INCOMPLETE_BATCH"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "ReadManifest",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "RequireComplete",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "JsonSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": false
+								},
+								"formatSettings": {
+									"type": "JsonReadSettings"
+								}
+							},
+							"dataset": {
+								"referenceName": "ds_source_manifest",
+								"type": "DatasetReference",
+								"parameters": {
+									"path": {
+										"value": "@pipeline().parameters.source",
+										"type": "Expression"
+									},
+									"file": "manifest.json",
+									"account": {
+										"value": "@pipeline().parameters.sourceAccount",
+										"type": "Expression"
+									}
+								}
+							},
+							"firstRowOnly": true
+						}
+					},
+					{
+						"name": "ListSourceFiles",
+						"type": "GetMetadata",
+						"dependsOn": [
+							{
+								"activity": "ReadManifest",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_source_folder",
+								"type": "DatasetReference",
+								"parameters": {
+									"path": {
+										"value": "@pipeline().parameters.source",
+										"type": "Expression"
+									},
+									"account": {
+										"value": "@pipeline().parameters.sourceAccount",
+										"type": "Expression"
+									}
+								}
+							},
+							"fieldList": [
+								"childItems"
+							],
+							"storeSettings": {
+								"type": "AzureBlobStorageReadSettings",
+								"recursive": false
+							}
+						}
+					},
+					{
+						"name": "ExpectedFilesPresent",
+						"type": "Filter",
+						"dependsOn": [
+							{
+								"activity": "ListSourceFiles",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('ListSourceFiles').output.childItems",
+								"type": "Expression"
+							},
+							"condition": {
+								"value": "@and(equals(item().type, 'File'), contains(pipeline().parameters.tableFiles, item().name))",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "RequireExpectedFiles",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "ExpectedFilesPresent",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@and(and(equals(length(activity('ExpectedFilesPresent').output.value), length(pipeline().parameters.tableFiles)), equals(length(activity('ListSourceFiles').output.childItems), add(length(pipeline().parameters.tableFiles), 2))), equals(activity('ReadManifest').output.firstRow.source, pipeline().parameters.source))",
+								"type": "Expression"
+							},
+							"ifFalseActivities": [
+								{
+									"name": "WrongFileSet",
+									"type": "Fail",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"message": "Missing/unexpected table files or wrong source in manifest",
+										"errorCode": "SOURCE_CONTRACT_MISMATCH"
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "ClearLandingMarker",
+						"type": "Delete",
+						"dependsOn": [
+							{
+								"activity": "RequireExpectedFiles",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_landing",
+								"type": "DatasetReference",
+								"parameters": {
+									"path": {
+										"value": "@concat(pipeline().parameters.source, '/', activity('ReadManifest').output.firstRow.batch_date)",
+										"type": "Expression"
+									},
+									"file": "_SUCCESS",
+									"account": {
+										"value": "@pipeline().parameters.account",
+										"type": "Expression"
+									}
+								}
+							},
+							"enableLogging": false,
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": false
+							}
+						}
+					},
+					{
+						"name": "CopyTables",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "ClearLandingMarker",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@pipeline().parameters.tableFiles",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "CopyTable",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.00:20:00",
+										"retry": 1,
+										"retryIntervalInSeconds": 30
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "BinarySource",
+											"storeSettings": {
+												"type": "AzureBlobStorageReadSettings",
+												"recursive": false
+											}
+										},
+										"sink": {
+											"type": "BinarySink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings",
+												"copyBehavior": "PreserveHierarchy"
+											}
+										},
+										"enableStaging": false,
+										"skipErrorFile": {
+											"dataInconsistency": false
+										},
+										"validateDataConsistency": true
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_source_blob",
+											"type": "DatasetReference",
+											"parameters": {
+												"path": {
+													"value": "@pipeline().parameters.source",
+													"type": "Expression"
+												},
+												"file": {
+													"value": "@item()",
+													"type": "Expression"
+												},
+												"account": {
+													"value": "@pipeline().parameters.sourceAccount",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_landing",
+											"type": "DatasetReference",
+											"parameters": {
+												"path": {
+													"value": "@concat(pipeline().parameters.source, '/', activity('ReadManifest').output.firstRow.batch_date)",
+													"type": "Expression"
+												},
+												"file": {
+													"value": "@item()",
+													"type": "Expression"
+												},
+												"account": {
+													"value": "@pipeline().parameters.account",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					},
+					{
+						"name": "CopyManifest",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "CopyTables",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.00:20:00",
+							"retry": 1,
+							"retryIntervalInSeconds": 30
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "BinarySource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": false
+								}
+							},
+							"sink": {
+								"type": "BinarySink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings",
+									"copyBehavior": "PreserveHierarchy"
+								}
+							},
+							"enableStaging": false,
+							"skipErrorFile": {
+								"dataInconsistency": false
+							},
+							"validateDataConsistency": true
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_source_blob",
+								"type": "DatasetReference",
+								"parameters": {
+									"path": {
+										"value": "@pipeline().parameters.source",
+										"type": "Expression"
+									},
+									"file": "manifest.json",
+									"account": {
+										"value": "@pipeline().parameters.sourceAccount",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_landing",
+								"type": "DatasetReference",
+								"parameters": {
+									"path": {
+										"value": "@concat(pipeline().parameters.source, '/', activity('ReadManifest').output.firstRow.batch_date)",
+										"type": "Expression"
+									},
+									"file": "manifest.json",
+									"account": {
+										"value": "@pipeline().parameters.account",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "CommitBatch",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "CopyManifest",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.00:20:00",
+							"retry": 1,
+							"retryIntervalInSeconds": 30
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "BinarySource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": false
+								}
+							},
+							"sink": {
+								"type": "BinarySink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings",
+									"copyBehavior": "PreserveHierarchy"
+								}
+							},
+							"enableStaging": false,
+							"skipErrorFile": {
+								"dataInconsistency": false
+							},
+							"validateDataConsistency": true
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_source_blob",
+								"type": "DatasetReference",
+								"parameters": {
+									"path": {
+										"value": "@pipeline().parameters.source",
+										"type": "Expression"
+									},
+									"file": "_SUCCESS",
+									"account": {
+										"value": "@pipeline().parameters.sourceAccount",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_landing",
+								"type": "DatasetReference",
+								"parameters": {
+									"path": {
+										"value": "@concat(pipeline().parameters.source, '/', activity('ReadManifest').output.firstRow.batch_date)",
+										"type": "Expression"
+									},
+									"file": "_SUCCESS",
+									"account": {
+										"value": "@pipeline().parameters.account",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					}
+				],
+				"concurrency": 1,
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"source": {
+						"type": "String",
+						"defaultValue": "SAP_S4HANA"
+					},
+					"sourceAccount": {
+						"type": "String",
+						"defaultValue": "pfsrcywlye2bmne5kc"
+					},
+					"account": {
+						"type": "String",
+						"defaultValue": "procureflowywlye2bmne5kc"
+					},
+					"tableFiles": {
+						"type": "Array",
+						"defaultValue": [
+							"companies.csv",
+							"exchange_rates.csv",
+							"goods_receipts.csv",
+							"invoice_headers.csv",
+							"invoice_items.csv",
+							"materials.csv",
+							"payments.csv",
+							"plants.csv",
+							"po_headers.csv",
+							"po_history.csv",
+							"po_items.csv",
+							"purchasing_organizations.csv",
+							"suppliers.csv"
+						]
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_source_blob')]",
+				"[concat(variables('factoryId'), '/datasets/ds_source_manifest')]",
+				"[concat(variables('factoryId'), '/datasets/ds_source_folder')]",
+				"[concat(variables('factoryId'), '/datasets/ds_landing')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_landing')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_adls",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"path": {
+						"type": "String"
+					},
+					"file": {
+						"type": "String"
+					},
+					"account": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "Binary",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().file",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().path",
+							"type": "Expression"
+						},
+						"fileSystem": "landing"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_source_blob')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_source_blob",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"account": {
+							"value": "@dataset().account",
+							"type": "Expression"
+						}
+					}
+				},
+				"parameters": {
+					"path": {
+						"type": "String"
+					},
+					"file": {
+						"type": "String"
+					},
+					"account": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "Binary",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": {
+							"value": "@dataset().file",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().path",
+							"type": "Expression"
+						},
+						"container": "outbound"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_source_blob')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_source_folder')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_source_blob",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"account": {
+							"value": "@dataset().account",
+							"type": "Expression"
+						}
+					}
+				},
+				"parameters": {
+					"path": {
+						"type": "String"
+					},
+					"account": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "Binary",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"folderPath": {
+							"value": "@dataset().path",
+							"type": "Expression"
+						},
+						"container": "outbound"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_source_blob')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_source_manifest')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_source_blob",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"account": {
+							"value": "@dataset().account",
+							"type": "Expression"
+						}
+					}
+				},
+				"parameters": {
+					"path": {
+						"type": "String"
+					},
+					"file": {
+						"type": "String"
+					},
+					"account": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": {
+							"value": "@dataset().file",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@dataset().path",
+							"type": "Expression"
+						},
+						"container": "outbound"
+					}
+				},
+				"schema": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_source_blob')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_adls')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('ls_adls_properties_typeProperties_url')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_source_blob')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"parameters": {
+					"account": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"serviceEndpoint": "[parameters('ls_source_blob_properties_typeProperties_serviceEndpoint')]",
+					"accountKind": "StorageV2"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trigger1')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_blob_to_landing",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"source": "[parameters('trigger1_properties_pl_blob_to_landing_parameters_source')]",
+							"account": "[parameters('trigger1_properties_pl_blob_to_landing_parameters_account')]",
+							"sourceAccount": "[parameters('trigger1_properties_pl_blob_to_landing_parameters_sourceAccount')]"
+						}
+					}
+				],
+				"type": "BlobEventsTrigger",
+				"typeProperties": {
+					"blobPathBeginsWith": "/outbound/blobs/SAP_S4HANA/",
+					"blobPathEndsWith": "_SUCCESS",
+					"ignoreEmptyBlobs": true,
+					"scope": "[parameters('trigger1_properties_typeProperties_scope')]",
+					"events": [
+						"Microsoft.Storage.BlobCreated"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_blob_to_landing')]"
+			]
+		}
+	]
+}

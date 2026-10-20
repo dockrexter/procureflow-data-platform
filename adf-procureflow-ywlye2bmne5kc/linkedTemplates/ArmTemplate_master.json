@@ -1,0 +1,84 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "adf-procureflow-ywlye2bmne5kc"
+		},
+		"ls_adls_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://procureflowywlye2bmne5kc.dfs.core.windows.net"
+		},
+		"ls_source_blob_properties_typeProperties_serviceEndpoint": {
+			"type": "string",
+			"defaultValue": "@concat('https://',linkedService().account,'.blob.core.windows.net/')"
+		},
+		"trigger1_properties_pl_blob_to_landing_parameters_source": {
+			"type": "string",
+			"defaultValue": "SAP_S4HANA"
+		},
+		"trigger1_properties_pl_blob_to_landing_parameters_account": {
+			"type": "string",
+			"defaultValue": "procureflowywlye2bmne5kc"
+		},
+		"trigger1_properties_pl_blob_to_landing_parameters_sourceAccount": {
+			"type": "string",
+			"defaultValue": "pfsrcywlye2bmne5kc"
+		},
+		"trigger1_properties_typeProperties_scope": {
+			"type": "string",
+			"defaultValue": "/subscriptions/c3cc8c7c-2add-46ef-b570-46b02f846e70/resourceGroups/rg-procureflow-dev/providers/Microsoft.Storage/storageAccounts/pfsrcywlye2bmne5kc"
+		},
+		"containerUri": {
+			"type": "string",
+			"metadata": "URI to storage account containing linked ARM templates"
+		},
+		"containerSasToken": {
+			"type": "string",
+			"metadata": "Sas token to storage account containing linked ARM templates"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "adf-procureflow-ywlye2bmne5kc_ArmTemplate_0",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2024-03-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_0.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"ls_adls_properties_typeProperties_url": {
+						"value": "[parameters('ls_adls_properties_typeProperties_url')]"
+					},
+					"ls_source_blob_properties_typeProperties_serviceEndpoint": {
+						"value": "[parameters('ls_source_blob_properties_typeProperties_serviceEndpoint')]"
+					},
+					"trigger1_properties_pl_blob_to_landing_parameters_source": {
+						"value": "[parameters('trigger1_properties_pl_blob_to_landing_parameters_source')]"
+					},
+					"trigger1_properties_pl_blob_to_landing_parameters_account": {
+						"value": "[parameters('trigger1_properties_pl_blob_to_landing_parameters_account')]"
+					},
+					"trigger1_properties_pl_blob_to_landing_parameters_sourceAccount": {
+						"value": "[parameters('trigger1_properties_pl_blob_to_landing_parameters_sourceAccount')]"
+					},
+					"trigger1_properties_typeProperties_scope": {
+						"value": "[parameters('trigger1_properties_typeProperties_scope')]"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
