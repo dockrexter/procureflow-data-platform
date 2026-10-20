@@ -18,13 +18,7 @@
     },
     "linkedServiceName": {
       "referenceName": "ls_adls",
-      "type": "LinkedServiceReference",
-      "parameters": {
-        "account": {
-          "value": "@dataset().account",
-          "type": "Expression"
-        }
-      }
+      "type": "LinkedServiceReference"
     },
     "typeProperties": {
       "location": {

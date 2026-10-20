@@ -11,7 +11,6 @@
         },
         "parameters": {
           "source": "SAP_S4HANA",
-          "batchDate": "",
           "account": "procureflowywlye2bmne5kc",
           "sourceAccount": "pfsrcywlye2bmne5kc"
         }

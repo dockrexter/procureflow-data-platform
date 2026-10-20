@@ -1,33 +1,21 @@
-# Current change — 2026-10-20
-
-Source publishing now replaces fixed filenames under outbound/SAP_S4HANA/ without checking consumption. Obsolete dated folders within this source are removed during publication. Other sources are untouched. Local generator output and historical landing retain dated folders.
-
-12 tests pass, including replacement of a prior batch, stale folder cleanup, source isolation and interruption recovery. The ADF source path definition was adapted; the expected filename array is in config/sap_s4hana_files.json. The existing trigger definition is paused and its obsolete folder-date mapping cleared; a manifest Lookup should supply the date before reactivation. This repository change does not publish ADF automatically.
-
-Live migration verification is pending. See flat-outbound.md for the learning steps and concurrency limitations.
-
-## Previous deployment evidence
+# Verified status — 2026-10-20
 
 ## Completed
 
-- Synthetic SAP-style generator, reproducible bootstrap/daily data and direct Blob upload helper.
-- Azure foundation deployment returned Succeeded: resource group rg-procureflow-dev, source storage pfsrcywlye2bmne5kc, ADLS procureflowywlye2bmne5kc, and factory adf-procureflow-ywlye2bmne5kc in North Europe.
-- User connected ADF to Git. Its factory, publish_config.json and updated ls_adls were found in remote commit de04f4f and preserved.
-- Removed Bicep, infrastructure deployment commands and automatic ADF execution helpers.
-- Added a manual-only generation/upload workflow at the user’s request. It has no schedule and does not start ADF. See manual-generation.md for start/cancel controls.
+- Azure foundation exists: rg-procureflow-dev, source pfsrcywlye2bmne5kc, lake procureflowywlye2bmne5kc and adf-procureflow-ywlye2bmne5kc.
+- Manual GitHub generation/upload uses OIDC with user-approved access only to outbound. There is no generation schedule.
+- Run https://github.com/dockrexter/procureflow-data-platform/actions/runs/39406891778 successfully uploaded and read-back verified the bootstrap directly under outbound/SAP_S4HANA/. The uploader removes old dated subfolders and obsolete files within that source, replaces existing filenames unconditionally, and writes _SUCCESS last. It does not check consumption. Other sources are untouched.
+- 12 local tests and GitHub CI passed. Tests cover replacement, cleanup, source isolation, interruption/retry and generator integrity.
+- Main contains updated ADF source paths, config/sap_s4hana_files.json for the expected-table array, and learning guides for ADF and passwordless GitHub/Azure setup.
 
-## Upload evidence and remaining work
+## ADF deployment
 
-- Source bootstrap uploaded and read-back verified by GitHub run 39289889086: 13 CSVs, manifest.json and _SUCCESS at outbound/SAP_S4HANA/2026-10-19/. First ADF landing ingestion has not been run by this agent.
-- The attempted ADF publication failed on ls_adls URL format before the user updated that linked service. No subsequent publication or pipeline execution was attempted.
-- Manual publisher OIDC setup is complete with user-approved container-only access. Daily scheduling remains absent.
-- Databricks workspace/compute was not deployed. Bronze code is a later learning step.
-- Existing Azure resources were retained; removing code does not delete resources or eliminate storage charges.
+Published the flat-source linked service, source/manifest/landing datasets, filename-array pipeline and stopped trigger to the live factory on 2026-10-20. The pipeline reads its date from manifest.json; no batchDate parameter is needed. Test run `9a8fbf98-70c3-4d4f-8f4d-ad5697e2be8d` is in progress; a successful landing has not yet been confirmed for this version.
 
-## Validation
+The ADF editor currently selects main. Refresh it to load the latest Git definitions. Git commits and live publication remain separate operations. Source cleanup is not enabled: ADF has read-only access to outbound, and the next upload replaces the existing source files without checking consumption.
 
-12 local tests cover generation, data integrity, landing and Blob upload retry/conflict behavior using mocked cloud calls. ADF JSON reference checks are offline checks, not proof of a working live pipeline. The manual workflow can supply source files while the user builds the ADF pipeline.
+Azure subscription is Enabled with FreeTrial quota and spendingLimit On, verified on 2026-10-20. Remaining credit was not re-measured. The test uses existing ADF and storage resources; no Databricks compute or new paid service was provisioned.
 
-Successful cloud run: https://github.com/dockrexter/procureflow-data-platform/actions/runs/39289889086
+Do not overlap uploads with ADF reads/deletes: source replacement is not atomic and _SUCCESS does not lock files for an already-running reader. Daily files remain increments; preserve each consumed batch in landing before replacement if history matters.
 
-The first attempt failed authentication because the GitHub OIDC subject included immutable owner/repository IDs. The trust record was corrected to match the same approved repository and main branch; the next run succeeded. No storage keys or passwords were committed.
+Databricks compute has not been deployed or started. Bicep and automatic deployment scripts were removed at the user's request. No secrets or storage keys are committed.

@@ -52,4 +52,4 @@ Generation/upload is **manual only**: open GitHub Actions → Generate and uploa
 
 See [manual controls](docs/manual-generation.md). Existing Azure resources have not been deleted; storage remains subject to charges. See [learning steps](docs/runbook.md), [data contract](docs/data-contract.md), [cost review](docs/cost-review.md), and [verified status](docs/sprint-status.md).
 
-Source replacement and your next ADF steps: [flat outbound guide](docs/flat-outbound.md). Learn to reproduce authentication and later scheduling: [GitHub/Azure setup](docs/github-azure-setup.md).
+Source replacement and the ADF pipeline: [flat outbound guide](docs/flat-outbound.md). Learn to reproduce authentication and later scheduling: [GitHub/Azure setup](docs/github-azure-setup.md).

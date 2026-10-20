@@ -8,10 +8,7 @@
     },
     "type": "AzureBlobStorage",
     "typeProperties": {
-      "serviceEndpoint": {
-        "value": "@concat('https://',linkedService().account,'.blob.core.windows.net/')",
-        "type": "Expression"
-      },
+      "serviceEndpoint": "@concat('https://',linkedService().account,'.blob.core.windows.net/')",
       "accountKind": "StorageV2"
     }
   }
