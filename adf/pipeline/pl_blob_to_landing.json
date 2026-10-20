@@ -146,14 +146,13 @@
         ],
         "typeProperties": {
           "dataset": {
-            "referenceName": "ds_source_blob",
+            "referenceName": "ds_source_folder",
             "type": "DatasetReference",
             "parameters": {
               "path": {
                 "value": "@pipeline().parameters.source",
                 "type": "Expression"
               },
-              "file": "",
               "account": {
                 "value": "@pipeline().parameters.sourceAccount",
                 "type": "Expression"

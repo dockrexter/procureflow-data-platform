@@ -1,0 +1,36 @@
+{
+  "name": "ds_source_folder",
+  "properties": {
+    "type": "Binary",
+    "parameters": {
+      "path": {
+        "type": "String",
+        "defaultValue": ""
+      },
+      "account": {
+        "type": "String",
+        "defaultValue": ""
+      }
+    },
+    "linkedServiceName": {
+      "referenceName": "ls_source_blob",
+      "type": "LinkedServiceReference",
+      "parameters": {
+        "account": {
+          "value": "@dataset().account",
+          "type": "Expression"
+        }
+      }
+    },
+    "typeProperties": {
+      "location": {
+        "type": "AzureBlobStorageLocation",
+        "folderPath": {
+          "value": "@dataset().path",
+          "type": "Expression"
+        },
+        "container": "outbound"
+      }
+    }
+  }
+}
