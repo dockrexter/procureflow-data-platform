@@ -5,7 +5,7 @@ A learning project: synthetic SAP-style procurement data, independent daily deli
 ```text
 GitHub Actions: manually started Python generator
     ↓ verified upload, completion marker last
-Azure source Blob Storage: outbound/SAP_S4HANA/YYYY-MM-DD/
+Azure source Blob Storage: outbound/SAP_S4HANA/
     ↓ Azure Data Factory
 Separate ADLS Gen2 account: landing/SAP_S4HANA/YYYY-MM-DD/
     ↓ Databricks
@@ -51,3 +51,5 @@ Azure resources already exist. Manage them through the Azure portal; infrastruct
 Generation/upload is **manual only**: open GitHub Actions → Generate and upload (manual) → Run workflow. Choose a business date, bootstrap/daily, and generate_only/generate_and_upload. Use Cancel workflow on an active run to stop it. There is no daily schedule and no ADF execution.
 
 See [manual controls](docs/manual-generation.md). Existing Azure resources have not been deleted; storage remains subject to charges. See [learning steps](docs/runbook.md), [data contract](docs/data-contract.md), [cost review](docs/cost-review.md), and [verified status](docs/sprint-status.md).
+
+Source replacement and your next ADF steps: [flat outbound guide](docs/flat-outbound.md). Learn to reproduce authentication and later scheduling: [GitHub/Azure setup](docs/github-azure-setup.md).

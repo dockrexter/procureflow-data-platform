@@ -19,7 +19,7 @@ The epoch and seed are fixed in config/sap_s4hana.json. Bootstrap uses the epoch
 
 ## Upload source data for pipeline development
 
-The retained uploader uses Azure CLI login, checks file hashes and row counts, verifies uploaded bytes, and writes `_SUCCESS` last. Identical retries are accepted; conflicting files are not overwritten. The future publisher needs Storage Blob Data Contributor on the source outbound container, not subscription-wide access.
+The retained uploader uses Azure CLI login, checks file hashes and row counts, verifies uploaded bytes, and writes `_SUCCESS` last. Outbound uploads overwrite the same filenames without checking consumption. The future publisher needs Storage Blob Data Contributor on the source outbound container, not subscription-wide access.
 
 The user has enabled manual generation and source uploads for pipeline development. The equivalent command is:
 

@@ -12,13 +12,13 @@ Initial bootstrap **2026-10-19** is already uploaded and verified: [successful r
 4. Choose **generate_and_upload** to put the batch in Azure source storage, or **generate_only** to produce a downloadable artifact without uploading.
 5. Click **Run workflow** and open the run to follow its steps.
 
-The source path is `pfsrcywlye2bmne5kc / outbound / SAP_S4HANA / YYYY-MM-DD /`. The workflow does not run ADF or Databricks. No clock/schedule starts it. A completed run is stopped automatically; each click requests one batch, not a continuously running service.
+The source path is `pfsrcywlye2bmne5kc / outbound / SAP_S4HANA /`. The workflow does not run ADF or Databricks. No clock/schedule starts it. A completed run is stopped automatically; each click requests one batch, not a continuously running service.
 
 ## Stop
 
 Open the running workflow and click **Cancel workflow**. Cancellation is not instantaneous and does not roll back files already uploaded. If the upload completed before cancellation, the batch remains complete.
 
-A cancelled partial upload has no `_SUCCESS` marker and must not be ingested. Retry using the same date, mode, seed and configuration: identical existing files are accepted and missing files are uploaded. Conflicting content causes failure rather than overwrite. Do not change generator/configuration for an already published date.
+Replacement removes the previous `_SUCCESS` first, overwrites the fixed filenames and writes a new marker last. If cancelled during upload, rerun the selected batch to replace it fully. Do not overlap upload with ADF reading or cleanup. The generator does not check consumption.
 
 To prevent all future starts, use the workflow page's **… → Disable workflow**. Enable it again when ready. Disabling does not cancel an already running job: cancel that separately. Only one run is allowed to execute at a time; avoid queuing multiple dates and expect explicit replay if a pending run is replaced.
 

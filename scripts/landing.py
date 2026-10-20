@@ -52,7 +52,31 @@ def land(source, root=None, account=None, container="landing"):
     if not account or not re.fullmatch('[a-z0-9]{3,24}',account):raise ValueError('Invalid storage account')
     if container not in ['landing','outbound']:raise ValueError('Invalid container')
     common=['--account-name',account,'--container-name',container,'--auth-mode','login']
-    # Compare before writing. Never overwrite a different blob; interrupted uploads can resume.
+    if container == 'outbound':
+        # Outbound is a replaceable source folder, not a historical archive.
+        prefix=m['source']
+        marker=f'{prefix}/_SUCCESS'
+        existing=json.loads(az('storage','blob','list',*common,'--prefix',prefix+'/', '--query','[].name'))
+        if marker in existing:
+            az('storage','blob','delete',*common,'--name',marker)
+        # Remove stale files, including the former dated layout, only in this source.
+        expected={f'{prefix}/{n}' for n in names}
+        for blob in existing:
+            if blob not in expected:
+                az('storage','blob','delete',*common,'--name',blob)
+        for n in names:
+            blob=f'{prefix}/{n}'
+            az('storage','blob','upload',*common,'--name',blob,'--file',str(source/n),'--overwrite','true','--no-progress')
+            with tempfile.TemporaryDirectory() as tmp:
+                downloaded=Path(tmp)/n
+                az('storage','blob','download',*common,'--name',blob,'--file',str(downloaded),'--no-progress')
+                if downloaded.read_bytes()!=(source/n).read_bytes():
+                    if n == '_SUCCESS':
+                        az('storage','blob','delete',*common,'--name',marker)
+                    raise ValueError(f'Read-back mismatch: {blob}')
+        return f'https://{account}.blob.core.windows.net/{container}/{prefix}'
+    # Historical landing remains immutable.
+
     for n in names:
         blob=f'{prefix}/{n}'
         exists=json.loads(az('storage','blob','exists',*common,'--name',blob))['exists']

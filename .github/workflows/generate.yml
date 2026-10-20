@@ -70,5 +70,5 @@ jobs:
         run: |
           echo "Batch date: $BATCH_DATE" >> "$GITHUB_STEP_SUMMARY"
           echo "Action: $BATCH_ACTION" >> "$GITHUB_STEP_SUMMARY"
-          echo "Source path: outbound/SAP_S4HANA/$BATCH_DATE/" >> "$GITHUB_STEP_SUMMARY"
+          echo "Source path: outbound/SAP_S4HANA/" >> "$GITHUB_STEP_SUMMARY"
           echo "ADF was not started. There is no automatic schedule." >> "$GITHUB_STEP_SUMMARY"

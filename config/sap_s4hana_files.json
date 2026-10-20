@@ -1,0 +1,15 @@
+[
+  "companies.csv",
+  "exchange_rates.csv",
+  "goods_receipts.csv",
+  "invoice_headers.csv",
+  "invoice_items.csv",
+  "materials.csv",
+  "payments.csv",
+  "plants.csv",
+  "po_headers.csv",
+  "po_history.csv",
+  "po_items.csv",
+  "purchasing_organizations.csv",
+  "suppliers.csv"
+]

@@ -1,4 +1,12 @@
-# Verified project status — 2026-10-19
+# Current change — 2026-10-20
+
+Source publishing now replaces fixed filenames under outbound/SAP_S4HANA/ without checking consumption. Obsolete dated folders within this source are removed during publication. Other sources are untouched. Local generator output and historical landing retain dated folders.
+
+12 tests pass, including replacement of a prior batch, stale folder cleanup, source isolation and interruption recovery. The ADF source path definition was adapted; the expected filename array is in config/sap_s4hana_files.json. The existing trigger definition is paused and its obsolete folder-date mapping cleared; a manifest Lookup should supply the date before reactivation. This repository change does not publish ADF automatically.
+
+Live migration verification is pending. See flat-outbound.md for the learning steps and concurrency limitations.
+
+## Previous deployment evidence
 
 ## Completed
 
