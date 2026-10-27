@@ -1,0 +1,286 @@
+{
+	"name": "pl_source_to_landing",
+	"properties": {
+		"activities": [
+			{
+				"name": "RequireComplete",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@pipeline().parameters.CheckCompleteExists",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "IncompleteBatch",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "Source has no completion marker; finish uploading first",
+								"errorCode": "INCOMPLETE_BATCH"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "ListSourceFiles",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "RequireComplete",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_source_folder",
+						"type": "DatasetReference",
+						"parameters": {
+							"path": {
+								"value": "@pipeline().parameters.DataSourceName",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobStorageReadSettings",
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "BinaryReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Copy csv files",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "RequireComplete_copy1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": {
+								"value": "@pipeline().parameters.DataSourceName",
+								"type": "Expression"
+							},
+							"wildcardFileName": "*.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "PreserveHierarchy"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".csv"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_source_csv",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_landing_csv",
+						"type": "DatasetReference",
+						"parameters": {
+							"path": {
+								"value": "@pipeline().parameters.DataSourceName",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "ExpectedFilesPresent",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "ListSourceFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('ListSourceFiles').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@and(equals(item().type, 'File'), contains(pipeline().parameters.ExpectedFiles, item().name))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "RequireComplete_copy1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "ExpectedFilesPresent",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@pipeline().parameters.CheckCompleteExists",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "WrongFileSet",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "Missing/unexpected table files or wrong source in manifest",
+								"errorCode": "SOURCE_CONTRACT_MISMATCH"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Copy manifest",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Copy csv files",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "JsonSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "JsonReadSettings"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings",
+							"copyBehavior": "PreserveHierarchy"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_source_manifest",
+						"type": "DatasetReference",
+						"parameters": {
+							"path": {
+								"value": "@pipeline().parameters.DataSourceName",
+								"type": "Expression"
+							},
+							"file": "manifest.json"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_landing_manifest",
+						"type": "DatasetReference",
+						"parameters": {
+							"path": {
+								"value": "@pipeline().parameters.DataSourceName",
+								"type": "Expression"
+							},
+							"file": "manifest.json"
+						}
+					}
+				]
+			}
+		],
+		"parameters": {
+			"CheckCompleteExists": {
+				"type": "bool"
+			},
+			"DataSourceName": {
+				"type": "string"
+			},
+			"ExpectedFiles": {
+				"type": "string"
+			}
+		},
+		"annotations": []
+	}
+}

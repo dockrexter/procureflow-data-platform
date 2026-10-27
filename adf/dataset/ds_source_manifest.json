@@ -1,44 +1,37 @@
 {
-  "name": "ds_source_manifest",
-  "properties": {
-    "type": "Json",
-    "parameters": {
-      "path": {
-        "type": "String",
-        "defaultValue": ""
-      },
-      "file": {
-        "type": "String",
-        "defaultValue": ""
-      },
-      "account": {
-        "type": "String",
-        "defaultValue": ""
-      }
-    },
-    "linkedServiceName": {
-      "referenceName": "ls_source_blob",
-      "type": "LinkedServiceReference",
-      "parameters": {
-        "account": {
-          "value": "@dataset().account",
-          "type": "Expression"
-        }
-      }
-    },
-    "typeProperties": {
-      "location": {
-        "type": "AzureBlobStorageLocation",
-        "folderPath": {
-          "value": "@dataset().path",
-          "type": "Expression"
-        },
-        "fileName": {
-          "value": "@dataset().file",
-          "type": "Expression"
-        },
-        "container": "outbound"
-      }
-    }
-  }
+	"name": "ds_source_manifest",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_BlobStorage",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"path": {
+				"type": "String"
+			},
+			"file": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "sourceDatasets"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": {
+					"value": "@dataset().file",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@dataset().path",
+					"type": "Expression"
+				},
+				"container": "outbound"
+			}
+		},
+		"schema": {}
+	}
 }

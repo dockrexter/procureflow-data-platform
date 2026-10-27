@@ -1,0 +1,10 @@
+{
+	"name": "ls_adls_v2",
+	"properties": {
+		"annotations": [],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "https://procureflowywlye2bmne5kc.dfs.core.windows.net/"
+		}
+	}
+}

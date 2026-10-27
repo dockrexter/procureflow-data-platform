@@ -1,0 +1,104 @@
+{
+	"name": "pl_SAP_S4HANA",
+	"properties": {
+		"activities": [
+			{
+				"name": "CheckComplete",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_source_success",
+						"type": "DatasetReference",
+						"parameters": {
+							"dataSource": {
+								"value": "@pipeline().parameters.DataSourceName",
+								"type": "Expression"
+							},
+							"fileName": "_SUCCESS"
+						}
+					},
+					"fieldList": [
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobStorageReadSettings",
+						"recursive": false
+					},
+					"formatSettings": {
+						"type": "BinaryReadSettings"
+					}
+				}
+			},
+			{
+				"name": "pl_copy_source_to_landing",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "CheckComplete",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_source_to_landing",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"CheckCompleteExists": {
+							"value": "@activity('CheckComplete').output.exists",
+							"type": "Expression"
+						},
+						"DataSourceName": {
+							"value": "@pipeline().parameters.DataSourceName",
+							"type": "Expression"
+						},
+						"ExpectedFiles": {
+							"value": "@pipeline().parameters.ExpectedFiles",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"DataSourceName": {
+				"type": "string",
+				"defaultValue": "SAP_S4HANA"
+			},
+			"ExpectedFiles": {
+				"type": "array",
+				"defaultValue": [
+					"companies.csv",
+					"exchange_rates.csv",
+					"goods_receipts.csv",
+					"invoice_headers.csv",
+					"invoice_items.csv",
+					"materials.csv",
+					"payments.csv",
+					"plants.csv",
+					"po_headers.csv",
+					"po_history.csv",
+					"po_items.csv",
+					"purchasing_organizations.csv",
+					"suppliers.csv"
+				]
+			}
+		},
+		"annotations": []
+	}
+}
