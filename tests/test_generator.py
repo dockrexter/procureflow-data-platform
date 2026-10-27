@@ -72,4 +72,25 @@ class GeneratorTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 g.source_config('SAP_TEST', D, tmp)
 
+    def test_second_source_config_and_reproducible_increments(self):
+        config, mode = g.source_config('SAP_S4HANA_2', D)
+        self.assertEqual(mode, 'bootstrap')
+        self.assertEqual(config['source'], 'SAP_S4HANA_2')
+        self.assertNotEqual(config['seed'], C['seed'])
+        # Smaller volume exercises the same source configuration and full lifecycle.
+        config.update(bootstrap_pos=120, daily_pos=5, suppliers=20, materials=50)
+        files = g.build_files(config, D, mode)
+        self.assertEqual(files, g.build_files(config, D, mode))
+        self.assertNotEqual(files['po_items.csv'], g.build_files(C, D, mode)['po_items.csv'])
+        total = g.batch(config, D, mode)
+        for offset in range(1, 41):
+            daily = g.batch(config, D + timedelta(days=offset), 'daily')
+            for table, rows in daily.items():
+                total[table].extend(rows)
+        g.validate(total)
+        expected = g.snapshot(config, D + timedelta(days=40))
+        for table in total:
+            self.assertEqual(sorted(total[table], key=lambda row: json.dumps(row, sort_keys=True)),
+                             sorted(expected[table], key=lambda row: json.dumps(row, sort_keys=True)))
+
 if __name__=='__main__':unittest.main()

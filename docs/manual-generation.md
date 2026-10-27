@@ -4,18 +4,18 @@ Open https://github.com/dockrexter/procureflow-data-platform/actions/workflows/g
 
 Bootstrap uses **2026-10-19**. For increments, choose the next business date you want to generate after the batches you have already processed. The workflow does not track your ADF loads.
 
-Each upload replaces the files directly under `outbound/SAP_S4HANA/`, whether or not ADF consumed the previous batch. There are no date subfolders in Azure outbound. Local/downloadable artifacts can retain date folders.
+Each upload replaces the files directly under `outbound/<datasource>/`, whether or not ADF consumed the previous batch. There are no date subfolders in Azure outbound. Local/downloadable artifacts can retain date folders.
 
 ## Start
 
 1. Click **Run workflow**, keeping branch **main**.
-2. Enter **Datasource name**: `SAP_S4HANA`.
+2. Enter **Datasource name**: `SAP_S4HANA` or `SAP_S4HANA_2`.
 3. Enter **Date** in `YYYY-MM-DD` format.
-4. Click **Run workflow**. It reads `config/sap_s4hana.json`, generates, validates and uploads the batch.
+4. Click **Run workflow**. It reads the matching config (`config/sap_s4hana.json` or `config/sap_s4hana_2.json`), generates, validates and uploads the batch.
 
-There are only two inputs. No mode or upload-action selection is needed. The config's epoch (`2026-10-19` for SAP_S4HANA) automatically selects initial history; later dates select daily increments. An earlier date or unknown datasource fails before Azure login/upload. Generate each date in order; missed dates are not filled automatically. Datasource names use uppercase letters, numbers and underscores and map to lowercase config filenames. Only SAP_S4HANA is supported today; new source types also need generator support.
+There are only two inputs. No mode or upload-action selection is needed. The config's epoch (`2026-10-19` for SAP_S4HANA) automatically selects initial history; later dates select daily increments. An earlier date or unknown datasource fails before Azure login/upload. Generate each date in order; missed dates are not filled automatically. Datasource names use uppercase letters, numbers and underscores and map to lowercase config filenames. SAP_S4HANA and SAP_S4HANA_2 are separate simulated sources using the same SAP adapter. Other ERP types need generator support.
 
-The source path is `pfsrcywlye2bmne5kc / outbound / SAP_S4HANA /`. The workflow does not invoke ADF or Databricks. Independently configured Azure storage-event triggers may react to uploads; this cleanup does not change those triggers. No clock/schedule starts it. A completed run is stopped automatically; each click requests one batch, not a continuously running service.
+The source path is `pfsrcywlye2bmne5kc / outbound / <datasource> /`. The workflow does not invoke ADF or Databricks. Independently configured Azure storage-event triggers may react to uploads; this cleanup does not change those triggers. No clock/schedule starts it. A completed run is stopped automatically; each click requests one batch, not a continuously running service.
 
 ## Stop
 

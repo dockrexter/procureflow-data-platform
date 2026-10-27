@@ -57,3 +57,22 @@ class BlobDeliveryTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     publish_blob.publish(batch, account='sourcesample')
                 azure.assert_not_called()
+
+    def test_two_sources_upload_and_replace_independently(self):
+        second, _ = g.source_config('SAP_S4HANA_2', D)
+        second.update(bootstrap_pos=120, daily_pos=5, suppliers=20, materials=50)
+        with tempfile.TemporaryDirectory() as tmp:
+            first_batch = g.write_batch(C, D, 'bootstrap', tmp)
+            second_batch = g.write_batch(second, D, 'bootstrap', tmp)
+            fake = FakeAzure()
+            with patch.object(publish_blob, 'az', fake):
+                publish_blob.publish(first_batch, account='sourcesample')
+                original = dict(fake.blobs)
+                publish_blob.publish(second_batch, account='sourcesample')
+                daily = g.write_batch(second, D + timedelta(days=1), 'daily', tmp)
+                publish_blob.publish(daily, account='sourcesample')
+            self.assertEqual({k: v for k, v in fake.blobs.items() if k.startswith('SAP_S4HANA/')}, original)
+            second_blobs = {k: v for k, v in fake.blobs.items() if k.startswith('SAP_S4HANA_2/')}
+            self.assertEqual(len(second_blobs), 15)
+            self.assertTrue(all(k.count('/') == 1 for k in second_blobs))
+            self.assertEqual(second_blobs['SAP_S4HANA_2/po_items.csv'], (daily / 'po_items.csv').read_bytes())

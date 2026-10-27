@@ -1,6 +1,6 @@
 # ProcureFlow source generator
 
-Generate synthetic SAP S/4HANA-style procurement data and upload it to `outbound/SAP_S4HANA/` using one manually triggered GitHub workflow.
+Generate synthetic SAP S/4HANA-style procurement data and upload it to `outbound/<datasource>/` using one manually triggered GitHub workflow.
 
 ## Run when you choose
 
@@ -8,14 +8,14 @@ Open [Generate and upload (manual)](https://github.com/dockrexter/procureflow-da
 
 The workflow has exactly two inputs:
 
-1. **Datasource name**: `SAP_S4HANA` (loads `config/sap_s4hana.json`).
+1. **Datasource name**: `SAP_S4HANA` or `SAP_S4HANA_2` (loads the matching lowercase filename in `config/`).
 2. **Date**: the business date, in `YYYY-MM-DD` format.
 
-Every successful run generates and uploads. The configured epoch date produces the initial history and master data automatically; later dates produce daily increments. Dates before the epoch are rejected. Generate dates in order when you need complete history. Currently only the SAP_S4HANA adapter is implemented; another source needs its config and generator support.
+Every successful run generates and uploads. The configured epoch date produces the initial history and master data automatically; later dates produce daily increments. Dates before the epoch are rejected. Generate dates in order when you need complete history. Both sources simulate separate SAP systems using the same generator adapter, with different seeds and volumes. A different ERP format would need its own adapter.
 
 Each click runs one batch. There are no schedules, push/PR workflows, automated unit tests, ADF checks or deployments. Cancel an active run with **Cancel workflow**. Disable the workflow to prevent future manual starts.
 
-Uploads always replace the same filenames in `outbound/SAP_S4HANA/`, without checking consumption. No date folders are used in outbound. The uploader verifies the local files and uploaded bytes, writes `_SUCCESS` last, and leaves other source folders alone. Do not overlap an upload with ADF reading or deleting files. The workflow does not invoke ADF; any independently configured Azure event triggers are managed separately.
+Uploads always replace the same filenames in `outbound/<datasource>/`, without checking consumption. No date folders are used in outbound. The uploader verifies the local files and uploaded bytes, writes `_SUCCESS` last, and leaves other source folders alone. Do not overlap an upload with ADF reading or deleting files. The workflow does not invoke ADF; any independently configured Azure event triggers are managed separately.
 
 ## Files
 
@@ -29,7 +29,7 @@ Uploads always replace the same filenames in `outbound/SAP_S4HANA/`, without che
 | `docs/` | Manual controls, data contract and authentication explanation |
 | `adf/` | Existing definitions preserved; excluded from tests and workflows |
 
-Your pipeline development remains on [dev_SAP_S4HANA](https://github.com/dockrexter/procureflow-data-platform/tree/dev_SAP_S4HANA). This cleanup does not modify that branch or any Azure resources.
+The `adf/` folder was copied unchanged from [dev_SAP_S4HANA](https://github.com/dockrexter/procureflow-data-platform/tree/dev_SAP_S4HANA). Only its ADF files were imported into main; its workflows and scripts were not merged. The development branch and Azure resources were not modified.
 
 ## Optional local use
 
@@ -50,3 +50,9 @@ python3 scripts/publish_blob.py data/outbound/SAP_S4HANA/2026-10-19 --account pf
 ```
 
 GitHub uses the existing OIDC identity instead of a stored password. See [manual controls](docs/manual-generation.md), [authentication setup](docs/github-azure-setup.md), and [data contract](docs/data-contract.md).
+
+## Try the second datasource
+
+Run the manual workflow on main with **Datasource name = SAP_S4HANA_2** and **Date = 2026-10-19** for the initial dataset. Use **2026-10-20** for its first daily increment. Its config is `config/sap_s4hana_2.json`; uploads go to `outbound/SAP_S4HANA_2/`, leaving `outbound/SAP_S4HANA/` alone. Both sources use the same 13 fixed CSV filenames plus manifest and completion marker.
+
+The second source has seed 99, 1,500 initial POs, 30 new POs/day, 200 suppliers and 1,000 materials. Keys belong to their source; include the source identifier when combining datasets. Adding the generator does not configure ADF ingestion for it. The imported ADF definitions are exactly the development branch version.

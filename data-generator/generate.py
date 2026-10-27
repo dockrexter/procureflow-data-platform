@@ -41,7 +41,7 @@ def load_config(path):
             raise ValueError(f'Invalid {k}')
     if c['bootstrap_pos'] > 999999 or c['daily_pos'] > 999999:
         raise ValueError('Maximum 999999 POs per cohort')
-    if c.get('source') != 'SAP_S4HANA':
+    if c.get('adapter', c.get('source')) != 'SAP_S4HANA':
         raise ValueError('Unsupported source adapter')
     return c
 

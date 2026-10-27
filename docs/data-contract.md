@@ -31,3 +31,7 @@ The writer stages locally then renames the completed local batch. Outbound is mu
 Replacement is not atomic. `_SUCCESS` helps a new reader avoid an incomplete upload, but does not protect an already-running reader. Do not upload while ADF copies or deletes source files. Consumers must validate the manifest and hashes before accepting a landing batch. Cancellation or failed replacement can leave a partial folder; rerun the upload. Daily mode still means increments, not a full historical snapshot; archive each batch in landing before the next replacement if history matters.
 
 A new source should provide its own adapter/config, source identifier and contract. Landing is source/date parameterized; do not mix incompatible schemas under SAP_S4HANA.
+
+## Second simulated SAP system
+
+`SAP_S4HANA_2` uses `config/sap_s4hana_2.json` and the same SAP adapter, table schemas and relationships. It has independent seed/volume settings and writes under its own source prefix. Both configurations start on 2026-10-19. Identifiers can overlap across systems: downstream joins and keys must include the source identifier. Each source must have its own bootstrap followed by daily increments.

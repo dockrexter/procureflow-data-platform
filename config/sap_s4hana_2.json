@@ -1,0 +1,11 @@
+{
+  "source": "SAP_S4HANA_2",
+  "adapter": "SAP_S4HANA",
+  "seed": 99,
+  "epoch": "2026-10-19",
+  "history_days": 60,
+  "bootstrap_pos": 1500,
+  "daily_pos": 30,
+  "suppliers": 200,
+  "materials": 1000
+}
