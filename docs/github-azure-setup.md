@@ -15,7 +15,7 @@ The trust and role assignment persist, but each run obtains temporary tokens. AD
 
 ## Manual-only workflow
 
-The workflow uses only `workflow_dispatch`. Start it from GitHub Actions on main and choose a date, mode and action. There is no timer and no run on pushes or pull requests. The generator receives the selected mode and date directly; no scheduler script is needed.
+The workflow uses only `workflow_dispatch`. Start it from GitHub Actions on main and enter the datasource name and business date. There is no timer and no run on pushes or pull requests. The generator reads that datasource config and infers initial history versus daily increments from its epoch date. Every successful workflow run uploads; no scheduler script is needed.
 
 Cancel an active run with **Cancel workflow**. Disable the workflow to prevent future starts. No Azure identity or role changes are needed for this cleanup. Azure-side triggers, if configured independently, remain under your control.
 

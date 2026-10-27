@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import random
+import re
 import shutil
 import tempfile
 from datetime import date, timedelta
@@ -227,11 +228,37 @@ def write_batch(c, as_of, mode, root):
         if stage.exists(): shutil.rmtree(stage)
     return target
 
+def source_config(source, as_of, config_dir=None):
+    if not re.fullmatch(r'[A-Z][A-Z0-9_]*', source):
+        raise ValueError('Datasource must use uppercase letters, numbers and underscores')
+    config_dir = Path(config_dir) if config_dir else Path(__file__).resolve().parents[1] / 'config'
+    path = config_dir / (source.lower() + '.json')
+    if not path.is_file():
+        raise ValueError(f'No datasource configuration: {path.name}')
+    config = load_config(path)
+    if config['source'] != source:
+        raise ValueError('Datasource name does not match its configuration')
+    epoch = date.fromisoformat(config['epoch'])
+    if as_of < epoch:
+        raise ValueError(f'Date must be on or after {epoch}')
+    return config, 'bootstrap' if as_of == epoch else 'daily'
+
+
+def business_date(value):
+    parsed = date.fromisoformat(value)
+    if parsed.isoformat() != value:
+        raise ValueError('Date must use YYYY-MM-DD')
+    return parsed
+
+
 if __name__=='__main__':
     p=argparse.ArgumentParser()
-    p.add_argument('mode',choices=['bootstrap','daily'])
-    p.add_argument('--date',required=True,type=date.fromisoformat)
-    p.add_argument('--config',default='config/sap_s4hana.json')
-    p.add_argument('--output',default='data/outbound')
+    p.add_argument('--source', required=True)
+    p.add_argument('--date', required=True, type=business_date)
+    p.add_argument('--output', default='data/outbound')
     a=p.parse_args()
-    print(write_batch(load_config(a.config),a.date,a.mode,a.output))
+    try:
+        config, mode = source_config(a.source, a.date)
+    except ValueError as error:
+        p.error(str(error))
+    print(write_batch(config, a.date, mode, a.output))

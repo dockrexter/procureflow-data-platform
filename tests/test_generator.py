@@ -52,4 +52,24 @@ class GeneratorTests(unittest.TestCase):
     def test_date_guards(self):
         for mode,day in [('bootstrap',D+timedelta(days=1)),('daily',D),('daily',D-timedelta(days=1))]:
             with self.subTest(mode=mode,day=day),self.assertRaises(ValueError):g.batch(C,day,mode)
+    def test_source_config_selects_mode_from_its_own_epoch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = dict(C, source='SAP_S4HANA', epoch='2026-10-25')
+            Path(tmp, 'sap_s4hana.json').write_text(json.dumps(config))
+            selected, mode = g.source_config('SAP_S4HANA', date(2026,10,25), tmp)
+            self.assertEqual(selected, config)
+            self.assertEqual(mode, 'bootstrap')
+            self.assertEqual(g.source_config('SAP_S4HANA', date(2026,10,26), tmp)[1], 'daily')
+            with self.assertRaises(ValueError):
+                g.source_config('SAP_S4HANA', date(2026,10,24), tmp)
+
+    def test_source_config_rejects_unknown_unsafe_and_mismatched_names(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for name in ['UNKNOWN', '../SAP_S4HANA', 'SAP/S4HANA', 'sap_s4hana']:
+                with self.subTest(name=name), self.assertRaises(ValueError):
+                    g.source_config(name, D, tmp)
+            Path(tmp, 'sap_test.json').write_text(json.dumps(C))
+            with self.assertRaises(ValueError):
+                g.source_config('SAP_TEST', D, tmp)
+
 if __name__=='__main__':unittest.main()

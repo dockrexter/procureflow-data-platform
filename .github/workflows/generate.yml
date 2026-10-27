@@ -1,23 +1,18 @@
 name: Generate and upload (manual)
-run-name: '${{ inputs.mode }} / ${{ inputs.date }} / ${{ inputs.action }}'
+run-name: '${{ inputs.datasource }} / ${{ inputs.date }}'
 on:
   workflow_dispatch:
     inputs:
+      datasource:
+        description: 'Datasource name (must match a config, e.g. SAP_S4HANA)'
+        type: string
+        required: true
+        default: SAP_S4HANA
       date:
-        description: 'Business date YYYY-MM-DD (bootstrap must be 2026-10-19)'
+        description: 'Business date YYYY-MM-DD'
         type: string
         required: true
         default: '2026-10-19'
-      mode:
-        description: 'bootstrap = initial history; daily = one later day'
-        type: choice
-        options: [bootstrap, daily]
-        default: bootstrap
-      action:
-        description: 'Generate a downloadable batch, or generate and upload to source storage'
-        type: choice
-        options: [generate_and_upload, generate_only]
-        default: generate_and_upload
 permissions:
   contents: read
 concurrency:
@@ -33,41 +28,33 @@ jobs:
       id-token: write
     env:
       SOURCE_STORAGE_ACCOUNT: pfsrcywlye2bmne5kc
+      DATASOURCE: ${{ inputs.datasource }}
+      BATCH_DATE: ${{ inputs.date }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Generate and validate
-        env:
-          BATCH_DATE: ${{ inputs.date }}
-          BATCH_MODE: ${{ inputs.mode }}
-        run: python data-generator/generate.py "$BATCH_MODE" --date "$BATCH_DATE"
+        run: python data-generator/generate.py --source "$DATASOURCE" --date "$BATCH_DATE"
       - name: Save downloadable batch
         uses: actions/upload-artifact@v4
         with:
-          name: sap-s4hana-${{ github.run_id }}-${{ github.run_attempt }}
+          name: source-batch-${{ github.run_id }}-${{ github.run_attempt }}
           path: data/outbound/
           retention-days: 7
           if-no-files-found: error
       - name: Sign in to Azure without a stored password
-        if: inputs.action == 'generate_and_upload'
         uses: azure/login@v2
         with:
           client-id: 2d095ccd-e9fc-4dbf-89de-86c2d52d4dc3
           tenant-id: 0bfae774-6764-417a-9602-94c5eacc6c24
           subscription-id: c3cc8c7c-2add-46ef-b570-46b02f846e70
       - name: Upload and verify source batch
-        if: inputs.action == 'generate_and_upload'
-        env:
-          BATCH_DATE: ${{ inputs.date }}
-        run: python scripts/publish_blob.py "data/outbound/SAP_S4HANA/$BATCH_DATE" --account "$SOURCE_STORAGE_ACCOUNT"
+        run: python scripts/publish_blob.py "data/outbound/$DATASOURCE/$BATCH_DATE" --account "$SOURCE_STORAGE_ACCOUNT"
       - name: Record result
-        env:
-          BATCH_DATE: ${{ inputs.date }}
-          BATCH_ACTION: ${{ inputs.action }}
         run: |
           echo "Batch date: $BATCH_DATE" >> "$GITHUB_STEP_SUMMARY"
-          echo "Action: $BATCH_ACTION" >> "$GITHUB_STEP_SUMMARY"
-          echo "Source path: outbound/SAP_S4HANA/" >> "$GITHUB_STEP_SUMMARY"
+          echo "Datasource: $DATASOURCE" >> "$GITHUB_STEP_SUMMARY"
+          echo "Source path: outbound/$DATASOURCE/" >> "$GITHUB_STEP_SUMMARY"
           echo "This workflow does not invoke ADF. There is no automatic schedule." >> "$GITHUB_STEP_SUMMARY"

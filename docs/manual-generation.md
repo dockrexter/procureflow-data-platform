@@ -9,10 +9,11 @@ Each upload replaces the files directly under `outbound/SAP_S4HANA/`, whether or
 ## Start
 
 1. Click **Run workflow**, keeping branch **main**.
-2. Choose **bootstrap** with date **2026-10-19** for the initial history.
-3. For later batches choose **daily** with a date after the epoch, for example **2026-10-20**. Generate each date in order; the workflow does not fill missed dates automatically.
-4. Choose **generate_and_upload** to put the batch in Azure source storage, or **generate_only** to produce a downloadable artifact without uploading.
-5. Click **Run workflow** and open the run to follow its steps.
+2. Enter **Datasource name**: `SAP_S4HANA`.
+3. Enter **Date** in `YYYY-MM-DD` format.
+4. Click **Run workflow**. It reads `config/sap_s4hana.json`, generates, validates and uploads the batch.
+
+There are only two inputs. No mode or upload-action selection is needed. The config's epoch (`2026-10-19` for SAP_S4HANA) automatically selects initial history; later dates select daily increments. An earlier date or unknown datasource fails before Azure login/upload. Generate each date in order; missed dates are not filled automatically. Datasource names use uppercase letters, numbers and underscores and map to lowercase config filenames. Only SAP_S4HANA is supported today; new source types also need generator support.
 
 The source path is `pfsrcywlye2bmne5kc / outbound / SAP_S4HANA /`. The workflow does not invoke ADF or Databricks. Independently configured Azure storage-event triggers may react to uploads; this cleanup does not change those triggers. No clock/schedule starts it. A completed run is stopped automatically; each click requests one batch, not a continuously running service.
 
@@ -26,7 +27,7 @@ To prevent all future starts, use the workflow page's **… → Disable workflow
 
 ## What runs where
 
-GitHub supplies a temporary computer. It generates and validates CSVs, retains a downloadable artifact for seven days, then authenticates through Azure OIDC and uploads when selected. No laptop needs to stay on. Storage and GitHub Actions usage remain subject to their normal charges/allowances.
+GitHub supplies a temporary computer. It generates and validates CSVs, retains a downloadable artifact for seven days, then authenticates through Azure OIDC and uploads the batch. No laptop needs to stay on. Storage and GitHub Actions usage remain subject to their normal charges/allowances.
 
 The managed identity `id-procureflow-github-upload` trusts only this repository's main branch and receives Storage Blob Data Contributor only on the source outbound container. The workflow contains public resource identifiers, not passwords or storage keys. ADF Git integration is separate and is preserved.
 

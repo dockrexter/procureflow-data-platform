@@ -1,15 +1,17 @@
 # ProcureFlow source generator
 
-Generate synthetic SAP S/4HANA-style procurement data and optionally upload it to `outbound/SAP_S4HANA/` using one manually triggered GitHub workflow.
+Generate synthetic SAP S/4HANA-style procurement data and upload it to `outbound/SAP_S4HANA/` using one manually triggered GitHub workflow.
 
 ## Run when you choose
 
 Open [Generate and upload (manual)](https://github.com/dockrexter/procureflow-data-platform/actions/workflows/generate.yml), click **Run workflow**, and select **main**.
 
-- **bootstrap**, date **2026-10-19**: initial history and master data.
-- **daily**, a later date: transactions for that business date. Run dates in order when you need complete history.
-- **generate_only**: downloadable files; no Azure login or upload.
-- **generate_and_upload**: generate and replace files in source storage.
+The workflow has exactly two inputs:
+
+1. **Datasource name**: `SAP_S4HANA` (loads `config/sap_s4hana.json`).
+2. **Date**: the business date, in `YYYY-MM-DD` format.
+
+Every successful run generates and uploads. The configured epoch date produces the initial history and master data automatically; later dates produce daily increments. Dates before the epoch are rejected. Generate dates in order when you need complete history. Currently only the SAP_S4HANA adapter is implemented; another source needs its config and generator support.
 
 Each click runs one batch. There are no schedules, push/PR workflows, automated unit tests, ADF checks or deployments. Cancel an active run with **Cancel workflow**. Disable the workflow to prevent future manual starts.
 
@@ -34,8 +36,8 @@ Your pipeline development remains on [dev_SAP_S4HANA](https://github.com/dockrex
 Python 3.11 or later; no Python packages are required.
 
 ```sh
-python3 data-generator/generate.py bootstrap --date 2026-10-19
-python3 data-generator/generate.py daily --date 2026-10-20
+python3 data-generator/generate.py --source SAP_S4HANA --date 2026-10-19
+python3 data-generator/generate.py --source SAP_S4HANA --date 2026-10-20
 python3 -m unittest discover -s tests -v
 ```
 
