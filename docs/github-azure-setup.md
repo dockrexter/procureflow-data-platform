@@ -13,12 +13,10 @@ This is the setup already used by the manual workflow. You do not need to create
 
 The trust and role assignment persist, but each run obtains temporary tokens. ADF's GitHub source-control connection is a separate integration and does not give GitHub Actions permission to Azure Storage.
 
-## Automate after the platform is ready
+## Manual-only workflow
 
-Keep manual controls until testing is complete. To add daily delivery later, add a UTC `schedule` event to generate.yml and update BOTH login/upload `if` conditions to include scheduled events. scheduled_generate.py already defaults to UTC today and daily mode when manual inputs are absent. Keep workflow_dispatch so you can manually replay a date. Make the run summary handle absent manual inputs as well.
+The workflow uses only `workflow_dispatch`. Start it from GitHub Actions on main and choose a date, mode and action. There is no timer and no run on pushes or pull requests. The generator receives the selected mode and date directly; no scheduler script is needed.
 
-Choose a run time after the previous ADF ingestion/cleanup is finished. Upload overwrites unconditionally; it will not wait for consumption. ADF event triggering on `_SUCCESS` is appropriate only once the pipeline reads the batch date from manifest.json and validates the files. Replacing files is not an atomic folder transaction. For stronger guarantees later, coordinate the jobs rather than assuming a marker locks files.
-
-To stop: cancel an active GitHub run. To prevent future starts: disable the workflow; cancel an existing run separately. Disable the ADF trigger separately if you also want ingestion stopped. No daily schedule has been enabled here.
+Cancel an active run with **Cancel workflow**. Disable the workflow to prevent future starts. No Azure identity or role changes are needed for this cleanup. Azure-side triggers, if configured independently, remain under your control.
 
 References: https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-azure and https://github.com/Azure/login

@@ -7,7 +7,7 @@ from datetime import timedelta
 from unittest.mock import patch
 from test_generator import g, C, D
 sys.path.insert(0, str(Path(__file__).parents[1]/'scripts'))
-import landing
+import publish_blob
 
 class FakeAzure:
     def __init__(self):self.blobs={};self.uploads=[];self.fail_name=None
@@ -31,10 +31,10 @@ class BlobDeliveryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             batch=g.write_batch(C,D,'bootstrap',tmp);fake=FakeAzure()
             fake.blobs={'SAP_S4HANA/2026-10-19/old.csv':b'old','OTHER/file.csv':b'keep'}
-            with patch.object(landing,'az',fake):
-                landing.land(batch,account='sourcesample',container='outbound')
+            with patch.object(publish_blob,'az',fake):
+                publish_blob.publish(batch,account='sourcesample')
                 daily=g.write_batch(C,D+timedelta(days=1),'daily',tmp)
-                landing.land(daily,account='sourcesample',container='outbound')
+                publish_blob.publish(daily,account='sourcesample')
                 self.assertEqual(fake.blobs['SAP_S4HANA/payments.csv'],(daily/'payments.csv').read_bytes())
                 self.assertEqual(fake.blobs['OTHER/file.csv'],b'keep')
                 self.assertFalse(any(n.count('/')>1 for n in fake.blobs if n.startswith('SAP_S4HANA/')))
@@ -42,9 +42,18 @@ class BlobDeliveryTests(unittest.TestCase):
     def test_outage_leaves_no_success_then_resumes(self):
         with tempfile.TemporaryDirectory() as tmp:
             batch=g.write_batch(C,D,'bootstrap',tmp);fake=FakeAzure();fake.blobs['SAP_S4HANA/_SUCCESS']=b'old';fake.fail_name='payments.csv'
-            with patch.object(landing,'az',fake):
-                with self.assertRaises(RuntimeError):landing.land(batch,account='sourcesample',container='outbound')
+            with patch.object(publish_blob,'az',fake):
+                with self.assertRaises(RuntimeError):publish_blob.publish(batch,account='sourcesample')
                 self.assertFalse(any(k.endswith('/_SUCCESS') for k in fake.blobs))
                 fake.fail_name=None
-                landing.land(batch,account='sourcesample',container='outbound')
+                publish_blob.publish(batch,account='sourcesample')
                 self.assertTrue(fake.uploads[-1].endswith('/_SUCCESS'))
+
+    def test_corrupt_batch_is_rejected_before_any_azure_call(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            batch = g.write_batch(C, D, 'bootstrap', tmp)
+            (batch / 'payments.csv').write_text('corrupt')
+            with patch.object(publish_blob, 'az') as azure:
+                with self.assertRaises(ValueError):
+                    publish_blob.publish(batch, account='sourcesample')
+                azure.assert_not_called()

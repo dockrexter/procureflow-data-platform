@@ -2,7 +2,7 @@
 
 Open https://github.com/dockrexter/procureflow-data-platform/actions/workflows/generate.yml.
 
-Initial bootstrap **2026-10-19** is already uploaded and verified: [successful run](https://github.com/dockrexter/procureflow-data-platform/actions/runs/39406891778). Use **daily / 2026-10-20** for the next new batch, or repeat bootstrap with the same date to verify an identical retry.
+Bootstrap uses **2026-10-19**. For increments, choose the next business date you want to generate after the batches you have already processed. The workflow does not track your ADF loads.
 
 Each upload replaces the files directly under `outbound/SAP_S4HANA/`, whether or not ADF consumed the previous batch. There are no date subfolders in Azure outbound. Local/downloadable artifacts can retain date folders.
 
@@ -14,7 +14,7 @@ Each upload replaces the files directly under `outbound/SAP_S4HANA/`, whether or
 4. Choose **generate_and_upload** to put the batch in Azure source storage, or **generate_only** to produce a downloadable artifact without uploading.
 5. Click **Run workflow** and open the run to follow its steps.
 
-The source path is `pfsrcywlye2bmne5kc / outbound / SAP_S4HANA /`. The workflow does not run ADF or Databricks. No clock/schedule starts it. A completed run is stopped automatically; each click requests one batch, not a continuously running service.
+The source path is `pfsrcywlye2bmne5kc / outbound / SAP_S4HANA /`. The workflow does not invoke ADF or Databricks. Independently configured Azure storage-event triggers may react to uploads; this cleanup does not change those triggers. No clock/schedule starts it. A completed run is stopped automatically; each click requests one batch, not a continuously running service.
 
 ## Stop
 

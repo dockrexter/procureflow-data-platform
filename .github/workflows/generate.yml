@@ -42,7 +42,7 @@ jobs:
         env:
           BATCH_DATE: ${{ inputs.date }}
           BATCH_MODE: ${{ inputs.mode }}
-        run: python scripts/scheduled_generate.py
+        run: python data-generator/generate.py "$BATCH_MODE" --date "$BATCH_DATE"
       - name: Save downloadable batch
         uses: actions/upload-artifact@v4
         with:
@@ -59,10 +59,9 @@ jobs:
           subscription-id: c3cc8c7c-2add-46ef-b570-46b02f846e70
       - name: Upload and verify source batch
         if: inputs.action == 'generate_and_upload'
-        run: |
-          for batch in data/outbound/SAP_S4HANA/*; do
-            python scripts/publish_blob.py "$batch" --account "$SOURCE_STORAGE_ACCOUNT"
-          done
+        env:
+          BATCH_DATE: ${{ inputs.date }}
+        run: python scripts/publish_blob.py "data/outbound/SAP_S4HANA/$BATCH_DATE" --account "$SOURCE_STORAGE_ACCOUNT"
       - name: Record result
         env:
           BATCH_DATE: ${{ inputs.date }}
@@ -71,4 +70,4 @@ jobs:
           echo "Batch date: $BATCH_DATE" >> "$GITHUB_STEP_SUMMARY"
           echo "Action: $BATCH_ACTION" >> "$GITHUB_STEP_SUMMARY"
           echo "Source path: outbound/SAP_S4HANA/" >> "$GITHUB_STEP_SUMMARY"
-          echo "ADF was not started. There is no automatic schedule." >> "$GITHUB_STEP_SUMMARY"
+          echo "This workflow does not invoke ADF. There is no automatic schedule." >> "$GITHUB_STEP_SUMMARY"

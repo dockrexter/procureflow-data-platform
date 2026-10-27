@@ -1,55 +1,50 @@
-# ProcureFlow
+# ProcureFlow source generator
 
-A learning project: synthetic SAP-style procurement data, independent daily delivery, and an Azure data platform. You will configure and activate each stage step by step. These extracts are simplified simulations, not a real SAP connector.
+Generate synthetic SAP S/4HANA-style procurement data and optionally upload it to `outbound/SAP_S4HANA/` using one manually triggered GitHub workflow.
 
-```text
-GitHub Actions: manually started Python generator
-    ↓ verified upload, completion marker last
-Azure source Blob Storage: outbound/SAP_S4HANA/
-    ↓ Azure Data Factory
-Separate ADLS Gen2 account: landing/SAP_S4HANA/YYYY-MM-DD/
-    ↓ Databricks
-Bronze → Silver → Gold → Power BI (later stages)
-```
+## Run when you choose
 
-No laptop, SFTP server, Docker container or continuously running VM is needed for the future cloud workflow. GitHub provides temporary runners; Azure stores the delivered files between runs. Scheduling is best effort, so missed dates must be replayed.
+Open [Generate and upload (manual)](https://github.com/dockrexter/procureflow-data-platform/actions/workflows/generate.yml), click **Run workflow**, and select **main**.
 
-## Start locally
+- **bootstrap**, date **2026-10-19**: initial history and master data.
+- **daily**, a later date: transactions for that business date. Run dates in order when you need complete history.
+- **generate_only**: downloadable files; no Azure login or upload.
+- **generate_and_upload**: generate and replace files in source storage.
 
-Python 3.11+; generator and tests use the standard library:
+Each click runs one batch. There are no schedules, push/PR workflows, automated unit tests, ADF checks or deployments. Cancel an active run with **Cancel workflow**. Disable the workflow to prevent future manual starts.
+
+Uploads always replace the same filenames in `outbound/SAP_S4HANA/`, without checking consumption. No date folders are used in outbound. The uploader verifies the local files and uploaded bytes, writes `_SUCCESS` last, and leaves other source folders alone. Do not overlap an upload with ADF reading or deleting files. The workflow does not invoke ADF; any independently configured Azure event triggers are managed separately.
+
+## Files
+
+| Path | Purpose |
+|---|---|
+| `.github/workflows/generate.yml` | The single manual workflow |
+| `data-generator/generate.py` | Reproducible bootstrap and daily generator |
+| `config/` | Source configuration and expected filenames |
+| `scripts/publish_blob.py` | Batch validation and passwordless Blob upload |
+| `tests/` | Optional local generator/uploader tests; Azure calls are mocked |
+| `docs/` | Manual controls, data contract and authentication explanation |
+| `adf/` | Existing definitions preserved; excluded from tests and workflows |
+
+Your pipeline development remains on [dev_SAP_S4HANA](https://github.com/dockrexter/procureflow-data-platform/tree/dev_SAP_S4HANA). This cleanup does not modify that branch or any Azure resources.
+
+## Optional local use
+
+Python 3.11 or later; no Python packages are required.
 
 ```sh
-python3 -m unittest discover -s tests -v
 python3 data-generator/generate.py bootstrap --date 2026-10-19
 python3 data-generator/generate.py daily --date 2026-10-20
-python3 scripts/landing.py data/outbound/SAP_S4HANA/2026-10-19 --local-root data/landing
+python3 -m unittest discover -s tests -v
 ```
 
-Bootstrap includes 90 days of history, 5 companies, 20 plants, 10 purchasing organizations, 1,000 suppliers, 5,000 materials, 10,000 POs and related events through the bootstrap date. Daily batches add 100 POs and events for that day, including receipts/payments for earlier POs. The epoch is in `config/sap_s4hana.json`; do not change it mid-stream.
+Tests are run only when you execute the last command; they do not inspect ADF or connect to Azure. Generated-data validation during generation/upload remains enabled to avoid uploading corrupt files.
 
-## Directory guide
+For a local upload, sign in using Azure CLI and run:
 
-| Folder | What you will learn |
-|---|---|
-| `data-generator/` | Python, business relationships and reproducible data |
-| `config/` | Source settings such as dates, volumes and random seed |
-| `data/` | Local generated files, excluded from Git |
-| `scripts/` | Direct storage uploads and validation |
-| `adf/` | Blob-source linked service, datasets and copy pipeline |
-| `databricks/` | Bronze processing code and job configuration |
-| `.github/workflows/` | Code checks and a manually started generation/upload workflow |
-| `tests/` | Automated checks for correctness and delivery failures |
-| `docs/` | Data contract, learning steps, costs and actual status |
-| `powerbi/` | Reserved for later reporting work |
+```sh
+python3 scripts/publish_blob.py data/outbound/SAP_S4HANA/2026-10-19 --account pfsrcywlye2bmne5kc
+```
 
-.yml files are instructions read by GitHub Actions or Databricks; `.py` contains logic, `.json` holds structured settings, and `.md` contains explanations. A definition file does not create a cloud resource on its own.
-
-## Current learning setup
-
-Azure resources already exist. Manage them through the Azure portal; infrastructure templates and deployment scripts have been removed. ADF is connected to Git by the user; build and publish the pipeline in ADF Studio.
-
-Generation/upload is **manual only**: open GitHub Actions → Generate and upload (manual) → Run workflow. Choose a business date, bootstrap/daily, and generate_only/generate_and_upload. Use Cancel workflow on an active run to stop it. There is no daily schedule and no ADF execution.
-
-See [manual controls](docs/manual-generation.md). Existing Azure resources have not been deleted; storage remains subject to charges. See [learning steps](docs/runbook.md), [data contract](docs/data-contract.md), [cost review](docs/cost-review.md), and [verified status](docs/sprint-status.md).
-
-Source replacement and the ADF pipeline: [flat outbound guide](docs/flat-outbound.md). Learn to reproduce authentication and later scheduling: [GitHub/Azure setup](docs/github-azure-setup.md).
+GitHub uses the existing OIDC identity instead of a stored password. See [manual controls](docs/manual-generation.md), [authentication setup](docs/github-azure-setup.md), and [data contract](docs/data-contract.md).
