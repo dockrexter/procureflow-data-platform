@@ -29,7 +29,7 @@
 					"value": "@dataset().path",
 					"type": "Expression"
 				},
-				"fileSystem": "bronze"
+				"fileSystem": "staging"
 			},
 			"compressionCodec": "snappy"
 		},
