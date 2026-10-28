@@ -220,7 +220,7 @@
 							],
 							"outputs": [
 								{
-									"referenceName": "ds_bronze_parquet",
+									"referenceName": "ds_staging_parquet",
 									"type": "DatasetReference",
 									"parameters": {
 										"path": {

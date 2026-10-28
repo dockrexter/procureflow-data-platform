@@ -1,5 +1,5 @@
 {
-	"name": "ds_bronze_parquet",
+	"name": "ds_staging_parquet",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "ls_adls_v2",
@@ -14,7 +14,7 @@
 			}
 		},
 		"folder": {
-			"name": "bronzeDatasets"
+			"name": "stagingDatasets"
 		},
 		"annotations": [],
 		"type": "Parquet",
