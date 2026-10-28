@@ -93,7 +93,7 @@
 				}
 			},
 			{
-				"name": "RequireComplete_copy1",
+				"name": "RequireCompleteFiles",
 				"type": "IfCondition",
 				"dependsOn": [
 					{
@@ -106,7 +106,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"expression": {
-						"value": "@pipeline().parameters.CheckCompleteExists",
+						"value": "@and(\n    greater(length(pipeline().parameters.ExpectedFiles), 0),\n    equals(\n        length(activity('ExpectedFilesPresent').output.value),\n        length(pipeline().parameters.ExpectedFiles)\n    )\n)",
 						"type": "Expression"
 					},
 					"ifFalseActivities": [
@@ -198,7 +198,7 @@
 				"type": "ForEach",
 				"dependsOn": [
 					{
-						"activity": "RequireComplete_copy1",
+						"activity": "RequireCompleteFiles",
 						"dependencyConditions": [
 							"Succeeded"
 						]

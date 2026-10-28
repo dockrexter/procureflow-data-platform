@@ -118,7 +118,21 @@
 						"referenceName": "pl_landing_to_bronze",
 						"type": "PipelineReference"
 					},
-					"waitOnCompletion": true
+					"waitOnCompletion": true,
+					"parameters": {
+						"DataSourceName": {
+							"value": "@pipeline().parameters.DataSourceName",
+							"type": "Expression"
+						},
+						"ExpectedFiles": {
+							"value": "@pipeline().parameters.ExpectedFiles",
+							"type": "Expression"
+						},
+						"procureflow_inserted_timestamp": {
+							"value": "@variables('procureflow_inserted_timestamp')",
+							"type": "Expression"
+						}
+					}
 				}
 			}
 		],
