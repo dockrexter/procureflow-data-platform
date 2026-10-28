@@ -1,5 +1,5 @@
 {
-	"name": "pl_SAP_S4HANA",
+	"name": "pl_data_source_main",
 	"properties": {
 		"activities": [
 			{

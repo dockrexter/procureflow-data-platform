@@ -169,16 +169,10 @@
 							"typeProperties": {
 								"source": {
 									"type": "DelimitedTextSource",
-									"additionalColumns": [
-										{
-											"name": "batch_date",
-											"value": "@activity('ReadManifest').output.firstRow.batch_date"
-										},
-										{
-											"name": "ingested_at_utc",
-											"value": "@variables('procureflow_inserted_timestamp')"
-										}
-									],
+									"additionalColumns": {
+										"type": "Expression",
+										"value": "@json(\n    concat(\n        '[',\n        '{\"name\":\"_batch_date\",\"value\":\"',\n        activity('ReadManifest').output.firstRow.batch_date,\n        '\"},',\n        '{\"name\":\"_ingested_at_utc\",\"value\":\"',\n        pipeline().parameters.procureflow_inserted_timestamp,\n        '\"}',\n        ']'\n    )\n)"
+									},
 									"storeSettings": {
 										"type": "AzureBlobFSReadSettings",
 										"recursive": true,
