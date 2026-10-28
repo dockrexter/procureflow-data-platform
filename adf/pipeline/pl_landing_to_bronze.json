@@ -28,11 +28,234 @@
 					},
 					"dataset": {
 						"referenceName": "ds_source_manifest",
-						"type": "DatasetReference"
+						"type": "DatasetReference",
+						"parameters": {
+							"path": {
+								"value": "@pipeline().parameters.DataSourceName",
+								"type": "Expression"
+							},
+							"file": "manifest.json"
+						}
 					}
+				}
+			},
+			{
+				"name": "ListlandingFiles",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "ReadManifest",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_landing_folder",
+						"type": "DatasetReference",
+						"parameters": {
+							"path": {
+								"value": "@pipeline().parameters.DataSourceName",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "BinaryReadSettings"
+					}
+				}
+			},
+			{
+				"name": "ExpectedFilesPresent",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "ListlandingFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('ListlandingFiles').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@and(equals(item().type, 'File'), contains(pipeline().parameters.ExpectedFiles, item().name))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "RequireCompleteFiles",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "ExpectedFilesPresent",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(\n    greater(length(pipeline().parameters.ExpectedFiles), 0),\n    equals(\n        length(activity('ExpectedFilesPresent').output.value),\n        length(pipeline().parameters.ExpectedFiles)\n    )\n)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "WrongFileSet",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "Missing/unexpected table files or wrong source in manifest",
+								"errorCode": "SOURCE_CONTRACT_MISMATCH"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "ForEachCsv",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "RequireCompleteFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('ExpectedFilesPresent').output.Value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Copy csv files",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"additionalColumns": [
+										{
+											"name": "batch_date",
+											"value": "@activity('ReadManifest').output.firstRow.batch_date"
+										},
+										{
+											"name": "ingested_at_utc",
+											"value": "@variables('procureflow_inserted_timestamp')"
+										}
+									],
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings",
+										"copyBehavior": "PreserveHierarchy"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_landing_csv",
+									"type": "DatasetReference",
+									"parameters": {
+										"path": {
+											"value": "@pipeline().parameters.DataSourceName",
+											"type": "Expression"
+										},
+										"file": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_bronze_parquet",
+									"type": "DatasetReference",
+									"parameters": {
+										"path": {
+											"value": "@pipeline().parameters.DataSourceName",
+											"type": "Expression"
+										},
+										"file": {
+											"value": "@replace(item().name, '.csv', '.parquet')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
 				}
 			}
 		],
+		"parameters": {
+			"DataSourceName": {
+				"type": "string"
+			},
+			"ExpectedFiles": {
+				"type": "string"
+			},
+			"procureflow_inserted_timestamp": {
+				"type": "string"
+			}
+		},
 		"annotations": []
 	}
 }
