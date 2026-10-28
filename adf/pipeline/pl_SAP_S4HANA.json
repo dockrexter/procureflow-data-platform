@@ -42,7 +42,7 @@
 				"type": "ExecutePipeline",
 				"dependsOn": [
 					{
-						"activity": "CheckComplete",
+						"activity": "Set variable1",
 						"dependencyConditions": [
 							"Succeeded"
 						]
@@ -73,6 +73,53 @@
 						}
 					}
 				}
+			},
+			{
+				"name": "Set variable1",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "CheckComplete",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "procureflow_inserted_timestamp",
+					"value": {
+						"value": "@utcNow()",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "pl_copy_landing_to_bronze",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_copy_source_to_landing",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_landing_to_bronze",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
 			}
 		],
 		"parameters": {
@@ -97,6 +144,11 @@
 					"purchasing_organizations.csv",
 					"suppliers.csv"
 				]
+			}
+		},
+		"variables": {
+			"procureflow_inserted_timestamp": {
+				"type": "String"
 			}
 		},
 		"annotations": []

@@ -5,6 +5,14 @@
 			"referenceName": "ls_BlobStorage",
 			"type": "LinkedServiceReference"
 		},
+		"parameters": {
+			"path": {
+				"type": "string"
+			},
+			"file": {
+				"type": "string"
+			}
+		},
 		"folder": {
 			"name": "sourceDatasets"
 		},
@@ -13,6 +21,14 @@
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobStorageLocation",
+				"fileName": {
+					"value": "@dataset().file",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@dataset().path",
+					"type": "Expression"
+				},
 				"container": "outbound"
 			},
 			"columnDelimiter": ",",
